@@ -37,6 +37,11 @@ class ComplexStochasticSignal(Signal):
                  nsamples: int):
         super().__init__(n, amp, fre, fs, nsamples)
 
+    @property
+    def frequency(self):
+        """frequency of signal (narrowband)"""
+        return self._fre
+
     def gen(self):
         envelope = self._amp * np.sqrt(1 / 2) *\
             (np.random.randn(self._n, self._nsamples) +\

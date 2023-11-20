@@ -30,6 +30,7 @@ class Array(ABC):
         """
         raise NotImplementedError()
 
+
 class UniformLinearArray(Array):
     def __init__(self, m: int, dd: float):
         """均匀线阵
@@ -44,7 +45,7 @@ class UniformLinearArray(Array):
     def num_elements(self):
         return self._element_positon.shape[0]
 
-    def steering_matrix(self, fre: float, azimuth: float,
+    def steering_vector(self, fre: float, azimuth: float,
                         elevation: float, unit: str = 'rad'):
         if unit == 'deg':
             azimuth = azimuth / 180 * np.pi  # 转换为弧度
