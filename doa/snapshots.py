@@ -2,7 +2,7 @@ import numpy as np
 
 def get_narrowband_array_received_data(array, signal, azimuth,
                                        elevation = None, unit = 'rad'):
-    """计算整理接收信号
+    """计算阵列接收信号
 
     Args:
         array: 阵列实例

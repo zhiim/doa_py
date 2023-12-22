@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 
-C = 3e8  # 光速
+C = 3e8  # 波速
 
 class Array(ABC):
     def __init__(self, element_positon):
