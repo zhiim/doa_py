@@ -20,7 +20,8 @@ class Array(ABC):
         Args:
             fre (float): 入射信号的频率
             azimuth (float): 入射信号的方位角
-            elevation (float): 入射信号的俯仰角
+            elevation (float): 入射信号的俯仰角. Defaults to None, 如果
+                `elevation` 为 None 只考虑一维信号.
             unit (str): {'rad', 'deg'}, 入射角的角度制，'rad'代表弧度，
                 'deg'代表角度，默认为'rad'
 
@@ -37,8 +38,9 @@ class Array(ABC):
 
         Args:
             signal : Signal 类实例化的对象
-            azimuth : 方位角
-            elevation : 俯仰角. Defaults to None, 只考虑一维.
+            azimuth : 方位角向量, 对应不同入射信号的方位角
+            elevation : 俯仰角向量, 对应不同入射信号的俯仰角. Defaults to None,
+                如果 `elevation` 为 None 只考虑一维信号.
             unit : 角度的单位制, `rad`代表弧度制, `deg`代表角度制. Defaults to
                 'rad'.
         """
@@ -95,4 +97,17 @@ class UniformLinearArray(Array):
         steering_vector = np.exp(-1j * 2 * np.pi * fre * tau)
 
         return steering_vector
+
+    def _gen_narrowband(self, signal, azimuth, elevation=None):
+        matrix_tau = 1 / C * self._element_positon * np.sin(azimuth)  # 时延
+        # 计算流形矩阵
+        manifold_matrix = np.exp(-1j * 2 * np.pi * signal.frequency *
+                                 matrix_tau)
+        received = manifold_matrix @ signal.gen()
+
+        return received
+
+    def _gen_broadband(self, signal, azimuth, elevation=None):
+        # 暂时不定义
+        pass
 
