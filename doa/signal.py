@@ -5,7 +5,17 @@ class Signal(ABC):
     """所有信号的基类
 
     继承此基类的信号必须要实现gen()方法, 用来产生仿真的采样信号
+
+    Args:
+        n (int): 入射信号的数目
+        amp (float): 信号的幅度
+        nsamples (int): 采样点数
     """
+    def __init__(self, n ,amp, nsamples):
+        self._n = n
+        self._amp = amp
+        self._nsamples = nsamples
+
     @property
     @abstractmethod
     def num_signals(self):
@@ -21,21 +31,19 @@ class Signal(ABC):
         raise NotImplementedError()
 
 class ComplexStochasticSignal(Signal):
-    def __init__(self, n: int ,amp: float, fre: float, fs: float,
-                 nsamples: int):
+    def __init__(self, n ,amp, nsamples, fre, fs):
         """随机复信号(随机相位信号的复数形式)
 
         Args:
             n (int): 入射信号的数目
             amp (float): 信号的幅度
+            nsamples (int): 采样点数
             fre (float): 信号的频率
             fs (float): 采样频率
-            nsamples (int): 采样点数
         """
-        self._n = n
-        self._amp = amp
+        super().__init__(n, amp, nsamples)
+
         self._fre = fre
-        self._nsamples = nsamples
         self._fs = fs
 
     @property

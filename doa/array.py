@@ -14,9 +14,8 @@ class Array(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def steering_vector(self, fre: float, azimuth: float,
-                        elevation: float, unit: str = 'rad'):
-        """计算某一入射角度对应的流型矩阵
+    def steering_vector(self, fre, azimuth, elevation=None, unit='rad'):
+        """计算某一入射角度对应的导向矢量
 
         Args:
             fre (float): 入射信号的频率
@@ -26,7 +25,51 @@ class Array(ABC):
                 'deg'代表角度，默认为'rad'
 
         Returns:
-            steering_vector (ndarray): 流型矩阵
+            steering_vector (ndarray): 导向矢量
+        """
+        raise NotImplementedError()
+
+    def received_signal(self, signal, azimuth, elevation=None, broadband=False,
+                        unit='rad'):
+        """Generate array received signal based on array signal model
+
+        如果`broadband`为True, 生成宽带信号的仿真.
+
+        Args:
+            signal : Signal 类实例化的对象
+            azimuth : 方位角
+            elevation : 俯仰角. Defaults to None, 只考虑一维.
+            unit : 角度的单位制, `rad`代表弧度制, `deg`代表角度制. Defaults to
+                'rad'.
+        """
+        azimuth = self._deg_to_rad(azimuth, unit)
+        elevation = self._deg_to_rad(elevation, unit)
+
+        if broadband is False:
+            self._gen_narrowband(signal, azimuth, elevation)
+        else:
+            self._gen_broadband(signal, azimuth, elevation)
+
+
+    def _deg_to_rad(self, angle, unit):
+        """将角度转换为弧度"""
+        if unit == 'deg' and angle is not None:
+            angle = angle / 180 * np.pi
+        return angle
+
+    @abstractmethod
+    def _gen_narrowband(self, signal, azimuth, elevation=None):
+        """Generate narrowband received signal
+
+        `azimuth` and `elevation` are already in radians
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def _gen_broadband(self, signal, azimuth, elevation=None):
+        """Generate broadband received signal
+
+        `azimuth` and `elevation` are already in radians
         """
         raise NotImplementedError()
 
@@ -45,10 +88,8 @@ class UniformLinearArray(Array):
     def num_elements(self):
         return self._element_positon.shape[0]
 
-    def steering_vector(self, fre: float, azimuth: float,
-                        elevation: float, unit: str = 'rad'):
-        if unit == 'deg':
-            azimuth = azimuth / 180 * np.pi  # 转换为弧度
+    def steering_vector(self, fre, azimuth, elevation=None, unit='rad'):
+        azimuth = self._deg_to_rad(azimuth, unit)
 
         tau = 1 / C * self._element_positon * np.sin(azimuth)  # 时延
         steering_vector = np.exp(-1j * 2 * np.pi * fre * tau)
