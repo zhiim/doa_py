@@ -48,9 +48,11 @@ class Array(ABC):
         elevation = self._deg_to_rad(elevation, unit)
 
         if broadband is False:
-            self._gen_narrowband(signal, azimuth, elevation)
+            received = self._gen_narrowband(signal, azimuth, elevation)
         else:
-            self._gen_broadband(signal, azimuth, elevation)
+            received = self._gen_broadband(signal, azimuth, elevation)
+
+        return received
 
 
     def _deg_to_rad(self, angle, unit):
@@ -84,7 +86,8 @@ class UniformLinearArray(Array):
             m (int): number of antenna elements
             dd (float): distance between adjacent antennas
         """
-        super().__init__(np.arange(m) * dd)
+        # 阵元位置应该是一个Mx1维矩阵，用于后续计算导向矢量
+        super().__init__(np.arange(m).reshape(-1, 1) * dd)
 
     @property
     def num_elements(self):
@@ -103,7 +106,7 @@ class UniformLinearArray(Array):
         # 计算流形矩阵
         manifold_matrix = np.exp(-1j * 2 * np.pi * signal.frequency *
                                  matrix_tau)
-        received = manifold_matrix @ signal.gen()
+        received = np.matmul(manifold_matrix, signal.gen())
 
         return received
 

@@ -17,7 +17,6 @@ class Signal(ABC):
         self._nsamples = nsamples
 
     @property
-    @abstractmethod
     def num_signals(self):
         return self._n
 
@@ -58,4 +57,3 @@ class ComplexStochasticSignal(Signal):
         signal = envelope * np.exp(1j * 2 * np.pi * self._fre / self._fs *\
             np.arange(self._nsamples))
         return signal
-
