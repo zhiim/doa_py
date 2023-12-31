@@ -89,13 +89,13 @@ class UniformLinearArray(Array):
 
         incidence_signal = signal.gen()
 
-        num_antennas = self._element_positon.shape[0]
-        num_snapshots = incidence_signal.shape[1]
-        noise = 1 / (10 ** (snr / 10)) * np.mean(incidence_signal) *\
-            1 / np.sqrt(2) * (np.random.randn(num_antennas, num_snapshots) +\
-                              1j * np.random.randn(num_antennas, num_snapshots))
+        received = manifold_matrix @ incidence_signal
 
-        received = manifold_matrix @ incidence_signal + noise
+        noise = 1 / np.sqrt(10 ** (snr / 10)) * np.mean(np.abs(received)) *\
+            1 / np.sqrt(2) * (np.random.randn(*received.shape) +\
+                              1j * np.random.randn(*received.shape))
+
+        received = received + noise
 
         return received
 
