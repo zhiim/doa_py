@@ -8,17 +8,19 @@ class Signal(ABC):
 
     Args:
         n (int): 入射信号的数目
-        amp (float): 信号的幅度
+        amp (np.array): 信号的幅度(n元素的1d array), 用来定义不同信号的不同幅度,
+            生成同幅度信号时不用考虑
         nsamples (int): 采样点数
     """
-    def __init__(self, n ,amp, nsamples):
+    def __init__(self, n, nsamples, amp=None):
         self._n = n
-        self._amp = amp
         self._nsamples = nsamples
 
-    @property
-    def num_signals(self):
-        return self._n
+        # 默认生成等幅信号
+        if amp is None:
+            self._amp = np.diag(np.ones(n))
+        else:
+            self._amp = np.diag(np.squeeze(amp))
 
     @abstractmethod
     def gen():
@@ -30,17 +32,18 @@ class Signal(ABC):
         raise NotImplementedError()
 
 class ComplexStochasticSignal(Signal):
-    def __init__(self, n ,amp, nsamples, fre, fs):
+    def __init__(self, n , nsamples, fre, fs, amp=None):
         """随机复信号(随机相位信号的复数形式)
 
         Args:
             n (int): 入射信号的数目
-            amp (float): 信号的幅度
             nsamples (int): 采样点数
             fre (float): 信号的频率
             fs (float): 采样频率
+            amp (np.array): 信号的幅度(nx1矩阵), 用来定义不同信号的不同幅度,
+                生成同幅度信号时不用考虑
         """
-        super().__init__(n, amp, nsamples)
+        super().__init__(n, nsamples, amp)
 
         self._fre = fre
         self._fs = fs
@@ -51,9 +54,11 @@ class ComplexStochasticSignal(Signal):
         return self._fre
 
     def gen(self):
-        envelope = self._amp * np.sqrt(1 / 2) *\
+        envelope = self._amp @ (np.sqrt(1 / 2) *\
             (np.random.randn(self._n, self._nsamples) +\
-                1j * np.random.randn(self._n, self._nsamples))  # 复包络
-        signal = envelope * np.exp(1j * 2 * np.pi * self._fre / self._fs *\
+                1j * np.random.randn(self._n, self._nsamples)))  # 复包络
+
+        signal = envelope * np.exp(-1j * 2 * np.pi * self._fre / self._fs *\
             np.arange(self._nsamples))
+
         return signal
