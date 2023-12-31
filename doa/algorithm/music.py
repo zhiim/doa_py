@@ -13,7 +13,6 @@ def get_noise_space(received_data, num_signal):
 
     return noise_space
 
-
 def music(received_data, num_signal, array_position, signal_fre, angle_grids,
           unit="deg"):
     """1D MUSIC
