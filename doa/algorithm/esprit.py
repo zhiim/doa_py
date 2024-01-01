@@ -55,13 +55,15 @@ def esprit(received_data, num_signal, array_position, signal_fre, unit="deg"):
     matrix_e_12 = matrix_e[:num_signal, num_signal:]
     matrix_e_22 = matrix_e[num_signal:, num_signal:]
 
-    matrix_psi = -matrix_e_12 @ matrix_e_22.transpose().conj()
+    matrix_psi = -matrix_e_12 @ np.linalg.inv(matrix_e_22)
     matrix_phi = np.linalg.eigvals(matrix_psi)
 
-    angles = np.arcsin(C * np.angle(matrix_phi) / ((2 * np.pi * signal_fre) *
+    # Note: the signal model we use is different from model in reference paper,
+    # so there should be "-2 pi f"
+    angles = np.arcsin(C * np.angle(matrix_phi) / ((-2 * np.pi * signal_fre) *
                                                    (sub_array_spacing)))
 
     if unit == "deg":
         angles = angles / np.pi * 180
 
-    return angles
+    return np.sort(angles)

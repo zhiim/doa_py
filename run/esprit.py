@@ -37,4 +37,5 @@ angles = esprit(received_data=received_data, num_signal=num_signal,
                 array_position=np.arange(8) * antenna_spacing,
                 signal_fre=signal_fre)
 
+np.set_printoptions(suppress=True)
 print(angles)
