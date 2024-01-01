@@ -1,12 +1,13 @@
 import os
 import sys
 import numpy as np
+import matplotlib.pyplot as plt
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from doa.signal import ComplexStochasticSignal
 from doa.array import UniformLinearArray
-from doa.algorithm.esprit import esprit
+from doa.algorithm.music import root_music
 
 
 # 仿真参数
@@ -31,9 +32,9 @@ received_data = array.received_signal(signal=signal, snr=snr,
                                       unit="deg")
 
 # 运行算法
-angles = esprit(received_data=received_data, num_signal=num_signal,
-                array_position=np.arange(8) * antenna_spacing,
-                signal_fre=signal_fre)
+angles = root_music(received_data=received_data, num_signal=num_signal,
+                    array_position=np.arange(8) * antenna_spacing,
+                    signal_fre=signal_fre, unit="deg")
 
 np.set_printoptions(suppress=True)
 print(angles)

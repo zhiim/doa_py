@@ -20,7 +20,7 @@ classical_doa
 
 - [x] MUSIC
 - [x] ESPRIT
-- [ ] Root-MUSIC
+- [x] Root-MUSIC
 - [ ] OMP
 - [ ] l1-SVD
 - [ ] UCA-RB-MUSIC
