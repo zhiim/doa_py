@@ -1,4 +1,4 @@
-Someclassical DOA Estimation algorithms implemented in Python.
+Some classical DOA Estimation algorithms implemented in Python.
 
 ## project structure
 
