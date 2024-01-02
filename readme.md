@@ -21,7 +21,7 @@ classical_doa
 - [x] MUSIC
 - [x] ESPRIT
 - [x] Root-MUSIC
-- [ ] OMP
+- [x] OMP
 - [ ] l1-SVD
 - [ ] UCA-RB-MUSIC
 - [ ] UCA-ESPRIT

@@ -1,4 +1,3 @@
-import sympy
 import numpy as np
 
 C = 3e8
