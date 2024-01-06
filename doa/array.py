@@ -99,7 +99,39 @@ class UniformLinearArray(Array):
 
         return received
 
-    def _gen_broadband(self, signal, snr, azimuth, elevation=None):
-        # 暂时不定义
-        pass
+    def _gen_broadband(self, signal, snr, angle_incidence):
+        num_antennas = self._element_positon.size
+
+        incidence_signal = signal.gen()
+        num_snapshots = incidence_signal.shape[1]
+
+        # generate array signal in frequency domain
+        signal_fre_domain = np.fft.fft(incidence_signal, axis=1)
+
+        azimuth = angle_incidence.reshape(1, -1)
+        matrix_tau = 1 / C * self._element_positon @ np.sin(azimuth)
+
+        received_fre_domain = np.zeros((num_antennas, num_snapshots),
+                                       dtype=np.complex_)
+        for i in range(num_snapshots):
+            if i > num_snapshots // 2:
+                # 负频率部分
+                fre_point = i * signal.fs / num_snapshots - signal.fs
+            else:
+                # 正频率部分
+                fre_point = i * signal.fs / num_snapshots
+
+            manifold_fre = np.exp(-1j * 2 * np.pi * fre_point * matrix_tau)
+
+            # calculate array received signal at every frequency point
+            received_fre_domain[:, i] = manifold_fre @ signal_fre_domain[:, i]
+
+        received = np.fft.ifft(received_fre_domain, axis=1)
+
+        noise = 1 / np.sqrt(10 ** (snr / 10)) * np.mean(np.abs(received)) *\
+            1 / np.sqrt(2) * (np.random.randn(*received.shape) +\
+                              1j * np.random.randn(*received.shape))
+        received = received + noise
+
+        return received
 

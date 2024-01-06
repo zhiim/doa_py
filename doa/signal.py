@@ -12,15 +12,20 @@ class Signal(ABC):
             生成同幅度信号时不用考虑
         nsamples (int): 采样点数
     """
-    def __init__(self, n, nsamples, amp=None):
+    def __init__(self, n, nsamples, fs, amp=None):
         self._n = n
         self._nsamples = nsamples
+        self._fs = fs
 
         # 默认生成等幅信号
         if amp is None:
             self._amp = np.diag(np.ones(n))
         else:
             self._amp = np.diag(np.squeeze(amp))
+
+    @property
+    def fs(self):
+        return self._fs
 
     @abstractmethod
     def gen():
@@ -43,10 +48,9 @@ class ComplexStochasticSignal(Signal):
             amp (np.array): 信号的幅度(nx1矩阵), 用来定义不同信号的不同幅度,
                 生成同幅度信号时不用考虑
         """
-        super().__init__(n, nsamples, amp)
+        super().__init__(n, nsamples, fs, amp)
 
         self._fre = fre
-        self._fs = fs
 
     @property
     def frequency(self):
@@ -60,5 +64,43 @@ class ComplexStochasticSignal(Signal):
 
         signal = envelope * np.exp(-1j * 2 * np.pi * self._fre / self._fs *\
             np.arange(self._nsamples))
+
+        return signal
+
+class ChirpSignal(Signal):
+    def __init__(self, n, nsamples, fs, f0, f1, t1, amp=None):
+        """Chirp signal
+
+        Args:
+            n (int): number of signal
+            nsamples (int): number of sampling points
+            f0 (np.array): start frequency at time 0. An 1d array of size n
+            f1 (np.array): frequency at time t1. An 1d array of size n
+            t1 (np.array): time at which f1 is specified. An 1d array of size n
+            fs (int | float): sampling frequency
+            amp (np.array, optional): amplitude of every signal.
+        """
+        super().__init__(n, nsamples, fs, amp)
+
+        self._f0 = f0
+        self._k = (f1 - f0) / t1  # rate of frequency change
+
+    def gen(self):
+        """Generate n chirp signal
+
+        Args:
+            time_start (np.array, optional): time point at which sampling start.
+                Defaults to None.
+        """
+        signal = np.zeros((self._n, self._nsamples), dtype=np.complex_)
+
+        # generate signal one by one
+        for i in range(self._n):
+            sampling_time = np.arange(self._nsamples) * 1 / self._fs
+            signal[i, :] = np.exp(1j * 2 * np.pi * (self._f0[i] * sampling_time\
+                                                    + 0.5 * self._k[i]\
+                                                        * sampling_time ** 2))
+
+        signal = self._amp @ signal
 
         return signal
