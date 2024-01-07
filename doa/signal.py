@@ -68,7 +68,7 @@ class ComplexStochasticSignal(Signal):
         return signal
 
 class ChirpSignal(Signal):
-    def __init__(self, n, nsamples, fs, f0, f1, t1, amp=None):
+    def __init__(self, n, nsamples, fs, f0, f1, t1=None, amp=None):
         """Chirp signal
 
         Args:
@@ -83,6 +83,8 @@ class ChirpSignal(Signal):
         super().__init__(n, nsamples, fs, amp)
 
         self._f0 = f0
+        if t1 is None:
+            t1 = np.full(f0.shape, nsamples / fs)
         self._k = (f1 - f0) / t1  # rate of frequency change
 
     def gen(self):

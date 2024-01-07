@@ -31,7 +31,7 @@ received_data = array.received_signal(signal=signal, snr=snr,
                                       angle_incidence=angle_incidence,
                                       unit="deg")
 
-# 运行MUSIC算法
+# 运行算法
 search_grids = np.arange(-90, 90, 1)
 
 spectrum = music(received_data=received_data, num_signal=num_signal,

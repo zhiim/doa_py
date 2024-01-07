@@ -7,6 +7,10 @@ class Array(ABC):
     def __init__(self, element_positon):
         self._element_positon = element_positon
 
+    @property
+    def array_position(self):
+        return self._element_positon
+
     def steering_vector(self, fre, azimuth, elevation=None, unit="deg"):
         """计算某一入射角度对应的导向矢量
 
@@ -94,7 +98,6 @@ class UniformLinearArray(Array):
         noise = 1 / np.sqrt(10 ** (snr / 10)) * np.mean(np.abs(received)) *\
             1 / np.sqrt(2) * (np.random.randn(*received.shape) +\
                               1j * np.random.randn(*received.shape))
-
         received = received + noise
 
         return received
@@ -113,15 +116,9 @@ class UniformLinearArray(Array):
 
         received_fre_domain = np.zeros((num_antennas, num_snapshots),
                                        dtype=np.complex_)
-        for i in range(num_snapshots):
-            if i > num_snapshots // 2:
-                # 负频率部分
-                fre_point = i * signal.fs / num_snapshots - signal.fs
-            else:
-                # 正频率部分
-                fre_point = i * signal.fs / num_snapshots
-
-            manifold_fre = np.exp(-1j * 2 * np.pi * fre_point * matrix_tau)
+        fre_points = np.fft.fftfreq(num_snapshots, 1 / signal.fs)
+        for i, fre in enumerate(fre_points):
+            manifold_fre = np.exp(-1j * 2 * np.pi * fre * matrix_tau)
 
             # calculate array received signal at every frequency point
             received_fre_domain[:, i] = manifold_fre @ signal_fre_domain[:, i]
