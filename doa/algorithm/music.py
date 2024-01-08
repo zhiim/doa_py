@@ -1,4 +1,5 @@
 import numpy as np
+
 from doa.algorithm.utils import get_noise_space
 
 C = 3e8

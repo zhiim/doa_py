@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
+
 import numpy as np
+
 
 class Signal(ABC):
     """所有信号的基类

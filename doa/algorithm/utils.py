@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def get_noise_space(received_data, num_signal):
     num_snapshots = received_data.shape[1]
 

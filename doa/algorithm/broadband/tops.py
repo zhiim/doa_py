@@ -1,6 +1,9 @@
 import numpy as np
-from doa.algorithm.utils import get_noise_space, get_signal_space
-from doa.algorithm.utils import divide_into_fre_bins
+from doa.algorithm.utils import (
+    divide_into_fre_bins,
+    get_noise_space,
+    get_signal_space,
+)
 
 C = 3e8
 
