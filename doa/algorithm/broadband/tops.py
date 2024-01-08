@@ -10,14 +10,13 @@ def tops(received_data, num_signal, array_position, fs, num_groups, angle_grids,
         angle_grids = angle_grids / 180 * np.pi
 
     num_antennas = received_data.shape[0]
-    num_snapshots = received_data.shape[1]
     array_position = array_position.reshape(-1, 1)
 
     signal_fre_bins, fre_bins = divide_into_fre_bins(received_data, num_groups,
                                                      fs)
 
     # index of reference frequency if FFT output
-    ref_index = int(fre_ref / (fs / num_snapshots))
+    ref_index = int(fre_ref / (fs / fre_bins.size))
     # get signal space of reference frequency
     signal_space_ref = get_signal_space(signal_fre_bins[:, ref_index, :],
                                         num_signal=num_signal)
