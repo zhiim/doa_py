@@ -7,7 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from doa.array import UniformLinearArray
 from doa.signal import ChirpSignal
-from doa.algorithm.broadband.issm import issm
+from doa.algorithm.broadband.imusic import imusic
 
 
 # 仿真参数
@@ -35,7 +35,7 @@ received_data = array.received_signal(signal=signal, snr=snr,
 # 运行算法
 search_grids = np.arange(-90, 90, 1)
 
-spectrum = issm(received_data=received_data, num_signal=num_signal,
+spectrum = imusic(received_data=received_data, num_signal=num_signal,
                 array_position=array.array_position, fs=fs,
                 angle_grids=search_grids, num_groups=5, unit="deg")
 

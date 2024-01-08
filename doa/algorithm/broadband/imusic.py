@@ -1,9 +1,10 @@
 import numpy as np
 from doa.algorithm.music import music
+from doa.algorithm.utils import divide_into_fre_bins
 
-def issm(received_data, num_signal, array_position, fs, angle_grids, num_groups,
-         unit="deg"):
-    """Incoherent Signal Subspace Method (ISSM) estimator for wideband DOA esti-
+def imusic(received_data, num_signal, array_position, fs, angle_grids,
+           num_groups, unit="deg"):
+    """Incoherent MUSIC estimator for wideband DOA esti-
     mation.
 
     Args:
@@ -22,27 +23,11 @@ def issm(received_data, num_signal, array_position, fs, angle_grids, num_groups,
         Speech, and Signal Processing 32, no. 4 (August 1984): 817-27.
         https://doi.org/10.1109/TASSP.1984.1164400.
     """
-    num_snapshots = received_data.shape[1]
-
-    n_each_group = num_snapshots // num_groups  # 每一组包含的采样点数
-    if n_each_group < 128:
-        n_fft = 128  # 如果点数太少, 做FFT时补零
-    else:
-        n_fft = n_each_group
-
-    signal_fre_bins = np.zeros((received_data.shape[0], n_fft, num_groups),
-                               dtype=np.complex_)
-    # 每一组独立做FFT
-    for group_i in range(num_groups):
-        signal_fre_bins[:, :, group_i] = np.fft.fft(
-            received_data[:,group_i * n_each_group: (group_i+1) * n_each_group],
-            n=n_fft,
-            axis=1
-            )
-    fre_bins = np.fft.fftfreq(n_fft, 1 / fs)
+    signal_fre_bins, fre_bins = divide_into_fre_bins(received_data, num_groups,
+                                                     fs)
 
     # 对每一个频点运行MUSIC算法
-    spectrum_fre_bins = np.zeros((n_fft, angle_grids.size))
+    spectrum_fre_bins = np.zeros((signal_fre_bins.shape[1], angle_grids.size))
     for i, fre in enumerate(fre_bins):
         spectrum_fre_bins[i, :] = music(received_data=signal_fre_bins[:, i, :],
                                         num_signal=num_signal,
