@@ -6,6 +6,25 @@ C = 3e8
 
 def tops(received_data, num_signal, array_position, fs, num_groups, angle_grids,
          fre_ref, unit="deg"):
+    """Test of orthogonality of projected subspaces (TOPS) method for wideband
+    DOA estimation.
+
+    Args:
+        received_data : 阵列接受信号
+        num_signal : 信号个数
+        array_position : 阵元位置, 应该是numpy array的形式, 行向量列向量均可
+        fs: 采样频率
+        num_groups: FFT的组数, 每一组都独立做FFT
+        angle_grids : 空间谱的网格点, 应该是numpy array的形式
+        fre_ref: 参考频点
+        unit : 角度的单位制, `rad`代表弧度制, `deg`代表角度制. Defaults to
+            'deg'.
+
+    References:
+        Yoon, Yeo-Sun, L.M. Kaplan, and J.H. McClellan. “TOPS: New DOA Estimator
+        for Wideband Signals.” IEEE Transactions on Signal Processing 54, no. 6
+        (June 2006): 1977-89. https://doi.org/10.1109/TSP.2006.872581.
+    """
     if unit == "deg":
         angle_grids = angle_grids / 180 * np.pi
 
