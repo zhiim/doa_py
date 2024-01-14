@@ -1,6 +1,7 @@
 import numpy as np
-from doa.algorithm.music import music
-from doa.algorithm.utils import divide_into_fre_bins
+
+from classical_doa.algorithm.music import music
+from classical_doa.algorithm.utils import divide_into_fre_bins
 
 
 def imusic(received_data, num_signal, array_position, fs, angle_grids,

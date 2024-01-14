@@ -1,5 +1,6 @@
 import numpy as np
-from doa.algorithm.music import music
+
+from classical_doa.algorithm.music import music
 
 C = 3e8
 

@@ -1,6 +1,6 @@
 import numpy as np
 
-from doa.algorithm.utils import get_signal_space
+from classical_doa.algorithm.utils import get_signal_space
 
 C = 3e8
 

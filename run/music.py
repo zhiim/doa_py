@@ -4,11 +4,11 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from doa.algorithm.music import music
-from doa.array import UniformLinearArray
-from doa.signal import ComplexStochasticSignal
+from classical_doa.algorithm.music import music
+from classical_doa.array import UniformLinearArray
+from classical_doa.signal import ComplexStochasticSignal
 
 # 仿真参数
 angle_incidence = np.array([-60, 0, 30])

@@ -4,11 +4,11 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
-from doa.algorithm.broadband.tops import tops
-from doa.array import UniformLinearArray
-from doa.signal import ChirpSignal
+from classical_doa.algorithm.broadband.tops import tops
+from classical_doa.array import UniformLinearArray
+from classical_doa.signal import ChirpSignal
 
 # 仿真参数
 angle_incidence = np.array([0, 50])

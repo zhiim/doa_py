@@ -1,5 +1,6 @@
 import numpy as np
-from doa.algorithm.utils import (
+
+from classical_doa.algorithm.utils import (
     divide_into_fre_bins,
     get_noise_space,
     get_signal_space,
