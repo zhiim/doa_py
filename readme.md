@@ -4,12 +4,11 @@ Some classical DOA Estimation algorithms implemented in Python.
 
 ```shell
 classical_doa
-├── doa
-│   ├── algorithm  # differen DOA estimation algorithms
-│   │   ├── esprit.py
-│   │   └── music.py
-│   ├── array.py  # different arrays
-│   └── signal.py  # different signal
+├── algorithm  # differen DOA estimation algorithms
+│   ├── esprit.py
+│   └── music.py
+├── array.py  # different arrays
+├── signal.py  # different signal
 ├── readme.md
 └── run  # examples of running algorithms
     ├── music.py
