@@ -28,7 +28,7 @@ class Array(ABC):
         """
         raise NotImplementedError()
 
-    def received_signal(self, signal, snr, angle_incidence,
+    def received_signal(self, signal, snr, angle_incidence, amp=None,
                         broadband=False, unit="deg"):
         """Generate array received signal based on array signal model
 
@@ -48,14 +48,14 @@ class Array(ABC):
             angle_incidence = angle_incidence / 180 * np.pi
 
         if broadband is False:
-            received = self._gen_narrowband(signal, snr, angle_incidence)
+            received = self._gen_narrowband(signal, snr, angle_incidence, amp)
         else:
-            received = self._gen_broadband(signal, snr, angle_incidence)
+            received = self._gen_broadband(signal, snr, angle_incidence, amp)
 
         return received
 
     @abstractmethod
-    def _gen_narrowband(self, signal, snr, angle_incidence):
+    def _gen_narrowband(self, signal, snr, angle_incidence, amp):
         """Generate narrowband received signal
 
         `azimuth` and `elevation` are already in radians
@@ -63,7 +63,7 @@ class Array(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def _gen_broadband(self, signal, snr, angle_incidence):
+    def _gen_broadband(self, signal, snr, angle_incidence, amp):
         """Generate broadband received signal
 
         `azimuth` and `elevation` are already in radians
@@ -82,9 +82,10 @@ class UniformLinearArray(Array):
         # 阵元位置应该是一个Mx1维矩阵，用于后续计算导向矢量
         super().__init__(np.arange(m).reshape(-1, 1) * dd)
 
-    def _gen_narrowband(self, signal, snr, angle_incidence):
+    def _gen_narrowband(self, signal, snr, angle_incidence, amp):
         """ULA时, angle_incidence应该是一个对应方位角的行向量"""
         azimuth = angle_incidence.reshape(1, -1)
+        num_signal = azimuth.shape[1]
 
         # 计算时延矩阵
         matrix_tau = 1 / C * self._element_positon @ np.sin(azimuth)
@@ -92,7 +93,7 @@ class UniformLinearArray(Array):
         manifold_matrix = np.exp(-1j * 2 * np.pi * signal.frequency *
                                  matrix_tau)
 
-        incidence_signal = signal.gen()
+        incidence_signal = signal.gen(n=num_signal, amp=amp)
 
         received = manifold_matrix @ incidence_signal
 
@@ -103,16 +104,17 @@ class UniformLinearArray(Array):
 
         return received
 
-    def _gen_broadband(self, signal, snr, angle_incidence):
+    def _gen_broadband(self, signal, snr, angle_incidence, amp):
+        azimuth = angle_incidence.reshape(1, -1)
+        num_signal = azimuth.shape[1]
+        num_snapshots = signal.nsamples
         num_antennas = self._element_positon.size
 
-        incidence_signal = signal.gen()
-        num_snapshots = incidence_signal.shape[1]
+        incidence_signal = signal.gen(n=num_signal, amp=amp)
 
         # generate array signal in frequency domain
         signal_fre_domain = np.fft.fft(incidence_signal, axis=1)
 
-        azimuth = angle_incidence.reshape(1, -1)
         matrix_tau = 1 / C * self._element_positon @ np.sin(azimuth)
 
         received_fre_domain = np.zeros((num_antennas, num_snapshots),
@@ -132,4 +134,3 @@ class UniformLinearArray(Array):
         received = received + noise
 
         return received
-

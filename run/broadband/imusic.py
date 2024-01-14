@@ -12,7 +12,6 @@ from doa.signal import ChirpSignal
 
 # 仿真参数
 angle_incidence = np.array([0, 50])
-num_signal = len(angle_incidence)
 num_snapshots = 300
 f0 = np.array([2e6, 3e6])
 f1 = np.array([5e6, 6e6])
@@ -23,7 +22,7 @@ num_antennas = 8
 antenna_spacing = 0.5 * (3e8 / max(f1))  # 阵元间距半波长
 
 # 生成仿真信号
-signal = ChirpSignal(n=num_signal, nsamples=num_snapshots, fs=fs, f0=f0, f1=f1)
+signal = ChirpSignal(nsamples=num_snapshots, fs=fs, f0=f0, f1=f1)
 
 array = UniformLinearArray(m=num_antennas, dd=antenna_spacing)
 
@@ -35,6 +34,7 @@ received_data = array.received_signal(signal=signal, snr=snr,
 # 运行算法
 search_grids = np.arange(-90, 90, 1)
 
+num_signal = len(angle_incidence)
 spectrum = imusic(received_data=received_data, num_signal=num_signal,
                 array_position=array.array_position, fs=fs,
                 angle_grids=search_grids, num_groups=5, unit="deg")
