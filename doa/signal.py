@@ -14,7 +14,7 @@ class Signal(ABC):
             生成同幅度信号时不用考虑
         nsamples (int): 采样点数
     """
-    def __init__(self, nsamples, fs, amp=None):
+    def __init__(self, nsamples, fs):
         self._nsamples = nsamples
         self._fs = fs
 
