@@ -4,13 +4,14 @@ import numpy as np
 
 C = 3e8  # 波速
 
+
 class Array(ABC):
-    def __init__(self, element_positon):
-        self._element_positon = element_positon
+    def __init__(self, element_position):
+        self._element_position = element_position
 
     @property
     def array_position(self):
-        return self._element_positon
+        return self._element_position
 
     def steering_vector(self, fre, azimuth, elevation=None, unit="deg"):
         """计算某一入射角度对应的导向矢量
@@ -35,12 +36,14 @@ class Array(ABC):
         如果`broadband`为True, 生成宽带信号的仿真.
 
         Args:
-            signal : Signal 类实例化的对象
+            signal: Signal 类实例化的对象
             snr: 信噪比
-            angle_incidence : 入射角度. 如果只考虑方位角, `angle_incidence`是
+            angle_incidence: 入射角度. 如果只考虑方位角, `angle_incidence`是
                 一个1xN维矩阵; 如果考虑二维, `angle_incidence`是一个2xN维矩阵,
                 其中第一行为方位角, 第二行为俯仰角.
-            unit : 角度的单位制, `rad`代表弧度制, `deg`代表角度制. Defaults to
+            amp: 每个信号的幅度, 1d numpy array
+            broadband: 是否生成宽带接受信号
+            unit: 角度的单位制, `rad`代表弧度制, `deg`代表角度制. Defaults to
                 'deg'.
         """
         # 将角度转换为弧度
@@ -88,7 +91,7 @@ class UniformLinearArray(Array):
         num_signal = azimuth.shape[1]
 
         # 计算时延矩阵
-        matrix_tau = 1 / C * self._element_positon @ np.sin(azimuth)
+        matrix_tau = 1 / C * self._element_position @ np.sin(azimuth)
         # 计算流形矩阵
         manifold_matrix = np.exp(-1j * 2 * np.pi * signal.frequency *
                                  matrix_tau)
@@ -98,7 +101,7 @@ class UniformLinearArray(Array):
         received = manifold_matrix @ incidence_signal
 
         noise = 1 / np.sqrt(10 ** (snr / 10)) * np.mean(np.abs(received)) *\
-            1 / np.sqrt(2) * (np.random.randn(*received.shape) +\
+            1 / np.sqrt(2) * (np.random.randn(*received.shape) +
                               1j * np.random.randn(*received.shape))
         received = received + noise
 
@@ -108,14 +111,14 @@ class UniformLinearArray(Array):
         azimuth = angle_incidence.reshape(1, -1)
         num_signal = azimuth.shape[1]
         num_snapshots = signal.nsamples
-        num_antennas = self._element_positon.size
+        num_antennas = self._element_position.size
 
         incidence_signal = signal.gen(n=num_signal, amp=amp)
 
         # generate array signal in frequency domain
         signal_fre_domain = np.fft.fft(incidence_signal, axis=1)
 
-        matrix_tau = 1 / C * self._element_positon @ np.sin(azimuth)
+        matrix_tau = 1 / C * self._element_position @ np.sin(azimuth)
 
         received_fre_domain = np.zeros((num_antennas, num_snapshots),
                                        dtype=np.complex_)
@@ -129,7 +132,7 @@ class UniformLinearArray(Array):
         received = np.fft.ifft(received_fre_domain, axis=1)
 
         noise = 1 / np.sqrt(10 ** (snr / 10)) * np.mean(np.abs(received)) *\
-            1 / np.sqrt(2) * (np.random.randn(*received.shape) +\
+            1 / np.sqrt(2) * (np.random.randn(*received.shape) +
                               1j * np.random.randn(*received.shape))
         received = received + noise
 

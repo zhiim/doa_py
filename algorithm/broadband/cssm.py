@@ -4,6 +4,7 @@ from classical_doa.algorithm.music import music
 
 C = 3e8
 
+
 def cssm(received_data, num_signal, array_position, fs, angle_grids, fre_ref,
          pre_estimate, unit="deg"):
     """Coherent Signal Subspace Method (CSSM) for wideband DOA estimation.

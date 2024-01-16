@@ -8,6 +8,7 @@ from classical_doa.algorithm.utils import (
 
 C = 3e8
 
+
 def tops(received_data, num_signal, array_position, fs, num_groups, angle_grids,
          fre_ref, unit="deg"):
     """Test of orthogonality of projected subspaces (TOPS) method for wideband

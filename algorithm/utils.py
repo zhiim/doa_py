@@ -14,6 +14,7 @@ def get_noise_space(received_data, num_signal):
 
     return noise_space
 
+
 def get_signal_space(received_data, num_signal):
     num_snapshots = received_data.shape[1]
 
@@ -26,6 +27,7 @@ def get_signal_space(received_data, num_signal):
     noise_space = eigenvectors[:, sorted_index[-num_signal:]]
 
     return noise_space
+
 
 def divide_into_fre_bins(received_data, num_groups, fs):
     """Do FFT on array signal of each channel, and divide signal into different
@@ -54,7 +56,7 @@ def divide_into_fre_bins(received_data, num_groups, fs):
     # 每一组独立做FFT
     for group_i in range(num_groups):
         signal_fre_bins[:, :, group_i] = np.fft.fft(
-            received_data[:,group_i * n_each_group: (group_i+1) * n_each_group],
+            received_data[:, group_i * n_each_group:(group_i+1) * n_each_group],
             n=n_fft,
             axis=1
             )

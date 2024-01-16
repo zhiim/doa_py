@@ -2,8 +2,9 @@ import numpy as np
 
 C = 3e8
 
+
 def omp(received_data, num_signal, array_position, signal_fre, angle_grids,
-          unit="deg"):
+        unit="deg"):
     """OMP based sparse representation algorithms for DOA estimation
 
     Args:
@@ -36,7 +37,7 @@ def omp(received_data, num_signal, array_position, signal_fre, angle_grids,
     residual = received_data
 
     # iteration
-    while(len(atom_index) < num_signal):
+    while len(atom_index) < num_signal:
         # measure relevance using Frobenius norm
         relevance = np.linalg.norm(matrix_a_over.transpose().conj() @ residual,
                                    axis=1)

@@ -4,6 +4,7 @@ from classical_doa.algorithm.utils import get_signal_space
 
 C = 3e8
 
+
 def esprit(received_data, num_signal, array_position, signal_fre, unit="deg"):
     """Total least-squares ESPRIT. Most names of matrix are taken directly from
     the reference paper.
@@ -13,7 +14,6 @@ def esprit(received_data, num_signal, array_position, signal_fre, unit="deg"):
         num_signal : 信号个数
         array_position : 阵元位置, 应该是numpy array的形式, 行向量列向量均可
         signal_fre: 信号频率
-        angle_grids : 空间谱的网格点, 应该是numpy array的形式
         unit : 返回的估计角度的单位制, `rad`代表弧度制, `deg`代表角度制.
             Defaults to 'deg'.
 
@@ -49,7 +49,7 @@ def esprit(received_data, num_signal, array_position, signal_fre, unit="deg"):
     # Note: the signal model we use is different from model in reference paper,
     # so there should be "-2 pi f"
     angles = np.arcsin(C * np.angle(matrix_phi) / ((-2 * np.pi * signal_fre) *
-                                                   (sub_array_spacing)))
+                                                   sub_array_spacing))
 
     if unit == "deg":
         angles = angles / np.pi * 180

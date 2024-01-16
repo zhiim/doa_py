@@ -4,6 +4,7 @@ from classical_doa.algorithm.utils import get_noise_space
 
 C = 3e8
 
+
 def music(received_data, num_signal, array_position, signal_fre, angle_grids,
           unit="deg"):
     """1D MUSIC
