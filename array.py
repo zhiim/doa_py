@@ -6,12 +6,23 @@ C = 3e8  # 波速
 
 
 class Array(ABC):
-    def __init__(self, element_position):
+    def __init__(self, element_position, rng=None):
         self._element_position = element_position
+
+        if rng is None:
+            self._rng = np.random.default_rng()
 
     @property
     def array_position(self):
         return self._element_position
+
+    def set_rng(self, rng):
+        """Setting random number generator
+
+        Args:
+            rng (np.random.Generator): random generator used to generator random
+        """
+        self._rng = rng
 
     def steering_vector(self, fre, azimuth, elevation=None, unit="deg"):
         """计算某一入射角度对应的导向矢量
@@ -75,15 +86,16 @@ class Array(ABC):
 
 
 class UniformLinearArray(Array):
-    def __init__(self, m: int, dd: float):
+    def __init__(self, m: int, dd: float, rng=None):
         """均匀线阵
 
         Args:
             m (int): number of antenna elements
             dd (float): distance between adjacent antennas
+            rng (np.random.Generator): random generator used to generator random
         """
         # 阵元位置应该是一个Mx1维矩阵，用于后续计算导向矢量
-        super().__init__(np.arange(m).reshape(-1, 1) * dd)
+        super().__init__(np.arange(m).reshape(-1, 1) * dd, rng)
 
     def _gen_narrowband(self, signal, snr, angle_incidence, amp):
         """ULA时, angle_incidence应该是一个对应方位角的行向量"""
@@ -101,8 +113,8 @@ class UniformLinearArray(Array):
         received = manifold_matrix @ incidence_signal
 
         noise = 1 / np.sqrt(10 ** (snr / 10)) * np.mean(np.abs(received)) *\
-            1 / np.sqrt(2) * (np.random.randn(*received.shape) +
-                              1j * np.random.randn(*received.shape))
+            1 / np.sqrt(2) * (self._rng.standard_normal(size=received.shape) +
+                            1j * self._rng.standard_normal(size=received.shape))
         received = received + noise
 
         return received
@@ -132,8 +144,8 @@ class UniformLinearArray(Array):
         received = np.fft.ifft(received_fre_domain, axis=1)
 
         noise = 1 / np.sqrt(10 ** (snr / 10)) * np.mean(np.abs(received)) *\
-            1 / np.sqrt(2) * (np.random.randn(*received.shape) +
-                              1j * np.random.randn(*received.shape))
+            1 / np.sqrt(2) * (self._rng.standard_normal(size=received.shape) +
+                            1j * self._rng.standard_normal(size=received.shape))
         received = received + noise
 
         return received

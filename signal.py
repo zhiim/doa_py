@@ -8,9 +8,12 @@ class Signal(ABC):
 
     继承此基类的信号必须要实现gen()方法, 用来产生仿真的采样信号
     """
-    def __init__(self, nsamples, fs):
+    def __init__(self, nsamples, fs, rng=None):
         self._nsamples = nsamples
         self._fs = fs
+
+        if rng is None:
+            self._rng = np.random.default_rng()
 
     @property
     def fs(self):
@@ -19,6 +22,14 @@ class Signal(ABC):
     @property
     def nsamples(self):
         return self._nsamples
+
+    def set_rng(self, rng):
+        """Setting random number generator
+
+        Args:
+            rng (np.random.Generator): random generator used to generator random
+        """
+        self._rng = rng
 
     @abstractmethod
     def gen(self, n, amp=None):
@@ -42,15 +53,16 @@ class Signal(ABC):
 
 
 class ComplexStochasticSignal(Signal):
-    def __init__(self, nsamples, fre, fs):
+    def __init__(self, nsamples, fre, fs, rng=None):
         """随机复信号(随机相位信号的复数形式)
 
         Args:
             nsamples (int): 采样点数
             fre (float): 信号的频率
             fs (float): 采样频率
+            rng (np.random.Generator): random generator used to generator random
         """
-        super().__init__(nsamples, fs)
+        super().__init__(nsamples, fs, rng)
 
         self._fre = fre
 
@@ -62,9 +74,10 @@ class ComplexStochasticSignal(Signal):
     def gen(self, n, amp=None):
         super().gen(n, amp)
 
-        envelope = self.amp @ (np.sqrt(1 / 2) *
-                                (np.random.randn(self.n, self._nsamples) +
-                                 1j * np.random.randn(self.n, self._nsamples)))  # 复包络
+        # 产生复包络
+        envelope = self.amp @ (np.sqrt(1 / 2) *\
+                (self._rng.standard_normal(size=(self.n, self._nsamples)) +\
+                 1j * self._rng.standard_normal(size=(self.n, self._nsamples))))
 
         signal = envelope * np.exp(-1j * 2 * np.pi * self._fre / self._fs *
                                    np.arange(self._nsamples))
@@ -73,7 +86,7 @@ class ComplexStochasticSignal(Signal):
 
 
 class ChirpSignal(Signal):
-    def __init__(self, nsamples, fs, f0, f1, t1=None):
+    def __init__(self, nsamples, fs, f0, f1, t1=None, rng=None):
         """Chirp signal
 
         Args:
@@ -83,7 +96,7 @@ class ChirpSignal(Signal):
             t1 (np.array): time at which f1 is specified. An 1d array of size n
             fs (int | float): sampling frequency
         """
-        super().__init__(nsamples, fs)
+        super().__init__(nsamples, fs, rng)
 
         self._f0 = f0
         if t1 is None:
