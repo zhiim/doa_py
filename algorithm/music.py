@@ -35,7 +35,6 @@ def music(received_data, num_signal, array_position, signal_fre, angle_grids,
 
     # 矩阵v的每一列对应一个入射信号, 对每一列求二范数的平方
     spectrum = 1 / np.linalg.norm(v, axis=0) ** 2
-    spectrum = 10 * np.log10(spectrum)
 
     return np.squeeze(spectrum)
 
@@ -54,7 +53,7 @@ def root_music(received_data, num_signal, array_position, signal_fre,
     References:
         Rao, B.D., and K.V.S. Hari. “Performance Analysis of Root-Music.”
         IEEE Transactions on Acoustics, Speech, and Signal Processing 37,
-        no. 12 (December 1989): 1939–49. https://doi.org/10.1109/29.45540.
+        no. 12 (December 1989): 1939-49. https://doi.org/10.1109/29.45540.
     """
     noise_space = get_noise_space(received_data, num_signal)
 
