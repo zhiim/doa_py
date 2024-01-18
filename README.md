@@ -49,7 +49,6 @@ plot_spatial_specturm(spectrum=spectrum, ground_truth=np.array([0, 30]),
                       angle_grids=angle_grids)
 ```
 You will a get a figure like this:
-
 ![music_spectrum](pics/music_spectrum.svg)
 
 Check `examples` for more examples.
@@ -85,4 +84,4 @@ Check `examples` for more examples.
 
 ## License
 
-This project is licensed under the [MIT](LICENSE) License - see the LICENSE file for details
+This project is licensed under the [MIT](LICENSE) License - see the LICENSE file for details.
