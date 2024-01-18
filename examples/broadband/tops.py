@@ -1,14 +1,14 @@
 import os
 import sys
 
-import matplotlib.pyplot as plt
 import numpy as np
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from classical_doa.algorithm.broadband.tops import tops
-from classical_doa.array import UniformLinearArray
-from classical_doa.signal import ChirpSignal
+from classical_doa.arrays import UniformLinearArray
+from classical_doa.plot import plot_spatial_specturm
+from classical_doa.signals import ChirpSignal
 
 # 仿真参数
 angle_incidence = np.array([0, 50])
@@ -39,5 +39,5 @@ spectrum = tops(received_data=received_data, num_signal=num_signal,
                 array_position=array.array_position, fs=fs, num_groups=5,
                 angle_grids=search_grids, fre_ref=4e6, unit="deg")
 
-plt.plot(search_grids, spectrum)
-plt.show()
+plot_spatial_specturm(spectrum=spectrum, ground_truth=angle_incidence,
+                      angle_grids=search_grids)
