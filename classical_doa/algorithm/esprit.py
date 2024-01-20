@@ -10,12 +10,12 @@ def esprit(received_data, num_signal, array_position, signal_fre, unit="deg"):
     the reference paper.
 
     Args:
-        received_data : 阵列接受信号
-        num_signal : 信号个数
-        array_position : 阵元位置, 应该是numpy array的形式, 行向量列向量均可
-        signal_fre: 信号频率
-        unit : 返回的估计角度的单位制, `rad`代表弧度制, `deg`代表角度制.
-            Defaults to 'deg'.
+        received_data : Array received signals
+        num_signal : Number of signals
+        array_position : Position of array elements. It should be a numpy array
+        signal_fre: Signal frequency
+        unit : Unit of angle, 'rad' for radians, 'deg' for degrees. Defaults to
+            'deg'.
 
     Reference:
         Roy, R., and T. Kailath. “ESPRIT-Estimation of Signal Parameters via
@@ -28,7 +28,8 @@ def esprit(received_data, num_signal, array_position, signal_fre, unit="deg"):
     # get signal space of two sub array. Each sub array consists of M-1 antennas
     matrix_e_x = signal_space[:-1, :]
     matrix_e_y = signal_space[1:, :]
-    # 两个子阵列中对应阵元之间的固定间距确保了旋转不变性
+    # the fixed distance of corresponding elements in two sub-array ensures
+    # the rotational invariance
     sub_array_spacing = array_position[1] - array_position[0]
 
     matrix_c = np.hstack((matrix_e_x, matrix_e_y)).transpose().conj() @\
@@ -36,7 +37,7 @@ def esprit(received_data, num_signal, array_position, signal_fre, unit="deg"):
 
     # get eigenvectors
     eigenvalues, eigenvectors = np.linalg.eig(matrix_c)
-    sorted_index = np.argsort(np.abs(eigenvalues))[::-1]  # 由大到小排序的索引
+    sorted_index = np.argsort(np.abs(eigenvalues))[::-1]  # descending order
     matrix_e = eigenvectors[:, sorted_index[:2 * num_signal]]
 
     # take the upper right and lower right sub matrix

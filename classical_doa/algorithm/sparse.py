@@ -8,12 +8,13 @@ def omp(received_data, num_signal, array_position, signal_fre, angle_grids,
     """OMP based sparse representation algorithms for DOA estimation
 
     Args:
-        received_data : 阵列接受信号
-        num_signal : 信号个数
-        array_position : 阵元位置, 应该是numpy array的形式, 行向量列向量均可
-        signal_fre: 信号频率
-        angle_grids : 空间谱的网格点, 应该是numpy array的形式
-        unit : 角度的单位制, `rad`代表弧度制, `deg`代表角度制. Defaults to
+        received_data : Array received signals
+        num_signal : Number of signals
+        array_position : Position of array elements. It should be a numpy array
+        signal_fre: Signal frequency
+        angle_grids : Angle grids corresponding to spatial spectrum. It should
+            be a numpy array.
+        unit : Unit of angle, 'rad' for radians, 'deg' for degrees. Defaults to
             'deg'.
 
     Reference:

@@ -9,7 +9,7 @@ def get_noise_space(received_data, num_signal):
         (received_data @ received_data.transpose().conj())
 
     eigenvalues, eigenvectors = np.linalg.eig(corvariance_matrix)
-    sorted_index = np.argsort(np.abs(eigenvalues))  # 由小到大排序的索引
+    sorted_index = np.argsort(np.abs(eigenvalues))  # ascending order
     noise_space = eigenvectors[:, sorted_index[:-num_signal]]
 
     return noise_space
@@ -23,7 +23,7 @@ def get_signal_space(received_data, num_signal):
         (received_data @ received_data.transpose().conj())
 
     eigenvalues, eigenvectors = np.linalg.eig(corvariance_matrix)
-    sorted_index = np.argsort(np.abs(eigenvalues))  # 由小到大排序的索引
+    sorted_index = np.argsort(np.abs(eigenvalues))  # ascending order
     noise_space = eigenvectors[:, sorted_index[-num_signal:]]
 
     return noise_space
@@ -39,21 +39,22 @@ def divide_into_fre_bins(received_data, num_groups, fs):
         fs : sampling frequency
 
     Returns:
-        `signal_fre_bins`: 一个m*n*l维的矩阵, 其中m为阵元数, n为FFT的点数,
-            l为组数
-        `fre_bins`: 每一个FFT点对应的频点
+        `signal_fre_bins`: a m*n*l tensor, in which m equals to number of
+            antennas, n is equals to point of FFT, l is the number of groups
+        `fre_bins`: corresponding freqeuncy of each point in FFT output
     """
     num_snapshots = received_data.shape[1]
 
-    n_each_group = num_snapshots // num_groups  # 每一组包含的采样点数
+    # number of sampling points in each group
+    n_each_group = num_snapshots // num_groups
     if n_each_group < 128:
-        n_fft = 128  # 如果点数太少, 做FFT时补零
+        n_fft = 128  # zero padding when sampling points is not enough
     else:
         n_fft = n_each_group
 
     signal_fre_bins = np.zeros((received_data.shape[0], n_fft, num_groups),
                                dtype=np.complex_)
-    # 每一组独立做FFT
+    # do FTT separately in each group
     for group_i in range(num_groups):
         signal_fre_bins[:, :, group_i] = np.fft.fft(
             received_data[:, group_i * n_each_group:(group_i+1) * n_each_group],

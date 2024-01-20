@@ -15,15 +15,16 @@ def tops(received_data, num_signal, array_position, fs, num_groups, angle_grids,
     DOA estimation.
 
     Args:
-        received_data : 阵列接受信号
-        num_signal : 信号个数
-        array_position : 阵元位置, 应该是numpy array的形式, 行向量列向量均可
-        fs: 采样频率
-        num_groups: FFT的组数, 每一组都独立做FFT
-        angle_grids : 空间谱的网格点, 应该是numpy array的形式
-        fre_ref: 参考频点
-        unit : 角度的单位制, `rad`代表弧度制, `deg`代表角度制. Defaults to
-            'deg'.
+        received_data: received signals from the array.
+        num_signal: Number of signals.
+        array_position: Array element positions, should be a numpy array
+        fs: Sampling frequency.
+        num_groups: Number of groups for FFT, each group performs an
+            independent FFT.
+        angle_grids: Grid points of spatial spectrum, should be a numpy array.
+        fre_ref: Reference frequency point.
+        unit: Unit of angle measurement, 'rad' for radians, 'deg' for degrees.
+            Defaults to 'deg'.
 
     References:
         Yoon, Yeo-Sun, L.M. Kaplan, and J.H. McClellan. “TOPS: New DOA Estimator
@@ -39,7 +40,7 @@ def tops(received_data, num_signal, array_position, fs, num_groups, angle_grids,
     signal_fre_bins, fre_bins = divide_into_fre_bins(received_data, num_groups,
                                                      fs)
 
-    # index of reference frequency if FFT output
+    # index of reference frequency in FFT output
     ref_index = int(fre_ref / (fs / fre_bins.size))
     # get signal space of reference frequency
     signal_space_ref = get_signal_space(signal_fre_bins[:, ref_index, :],
@@ -50,33 +51,34 @@ def tops(received_data, num_signal, array_position, fs, num_groups, angle_grids,
         matrix_d = np.empty((num_signal, 0), dtype=np.complex_)
 
         for j, fre in enumerate(fre_bins):
-            # 计算当前频点对应的噪声子空间
+            # calculate noise subspace for the current frequency point
             noise_space_f = get_noise_space(signal_fre_bins[:, j, :],
                                             num_signal)
 
-            # 构造变换矩阵
+            # construct transformation matrix
             matrix_phi = np.exp(-1j * 2 * np.pi * (fre - fre_ref) / C *
                                 array_position * np.sin(grid))
             matrix_phi = np.diag(np.squeeze(matrix_phi))
 
-            # 使用变换矩阵将参考频点的信号子空间变换到当前频点
+            # transform the signal subspace of the reference frequency to the
+            # current frequency using the transformation matrix
             matrix_u = matrix_phi @ signal_space_ref
 
-            # 构造投影矩阵，减小矩阵U中的误差
+            # construct projection matrix to reduce errors in matrix U
             matrix_a_f = np.exp(-1j * 2 * np.pi * fre / C *
                                 array_position * np.sin(grid))
             matrix_p = np.eye(num_antennas) -\
                 1 / (matrix_a_f.transpose().conj() @ matrix_a_f) *\
                     matrix_a_f @ matrix_a_f.transpose().conj()
 
-            # 使用投影矩阵对矩阵U进行投影
+            # project matrix U using the projection matrix
             matrix_u = matrix_p @ matrix_u
 
             matrix_d = np.concatenate((matrix_d,
                                        matrix_u.T.conj() @ noise_space_f),
                                        axis=1)
 
-        # 使用矩阵D中的最小特征值构造空间谱
+        # construct spatial spectrum using the minimum eigenvalue of matrix D
         _, s, _ = np.linalg.svd(matrix_d)
         spectrum[i] = 1 / min(s)
 

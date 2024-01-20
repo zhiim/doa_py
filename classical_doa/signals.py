@@ -4,9 +4,10 @@ import numpy as np
 
 
 class Signal(ABC):
-    """所有信号的基类
+    """Base class for all signal classes
 
-    继承此基类的信号必须要实现gen()方法, 用来产生仿真的采样信号
+    Signals that inherit from this base class must implement the gen() method to
+    generate simulated sampled signals.
     """
     def __init__(self, nsamples, fs, rng=None):
         self._nsamples = nsamples
@@ -27,25 +28,27 @@ class Signal(ABC):
         """Setting random number generator
 
         Args:
-            rng (np.random.Generator): random generator used to generator random
+            rng (np.random.Generator): random generator used to generate random
+                numbers
         """
         self._rng = rng
 
     @abstractmethod
     def gen(self, n, amp=None):
-        """产生采样后的信号
+        """Generate sampled signals
 
         Args:
-            n (int): 信号的数目
-            amp (np.array): 信号的幅度(n元素的1d array), 用来定义不同信号的不同
-                幅度, 默认为等幅信号
+            n (int): Number of signals
+            amp (np.array): Amplitude of the signals (1D array of size n), used
+                to define different amplitudes for different signals.
+                By default it will generate equal amplitude signal.
 
         Returns:
-            signal (np.array): 采用后的信号
+            signal (np.array): Sampled signals
         """
         self.n = n
 
-        # 默认生成等幅信号
+        # Default to generate signals with equal amplitudes
         if amp is None:
             self.amp = np.diag(np.ones(n))
         else:
@@ -54,13 +57,15 @@ class Signal(ABC):
 
 class ComplexStochasticSignal(Signal):
     def __init__(self, nsamples, fre, fs, rng=None):
-        """随机复信号(随机相位信号的复数形式)
+        """Complex stochastic signal (complex exponential form of random phase
+        signal)
 
         Args:
-            nsamples (int): 采样点数
-            fre (float): 信号的频率
-            fs (float): 采样频率
-            rng (np.random.Generator): random generator used to generator random
+            nsamples (int): Number of sampling points
+            fre (float): Signal frequency
+            fs (float): Sampling frequency
+            rng (np.random.Generator): Random generator used to generate random
+                numbers
         """
         super().__init__(nsamples, fs, rng)
 
@@ -68,13 +73,13 @@ class ComplexStochasticSignal(Signal):
 
     @property
     def frequency(self):
-        """frequency of signal (narrowband)"""
+        """Frequency of the signal (narrowband)"""
         return self._fre
 
     def gen(self, n, amp=None):
         super().gen(n, amp)
 
-        # 产生复包络
+        # Generate complex envelope
         envelope = self.amp @ (np.sqrt(1 / 2) *\
                 (self._rng.standard_normal(size=(self.n, self._nsamples)) +\
                  1j * self._rng.standard_normal(size=(self.n, self._nsamples))))
@@ -90,25 +95,25 @@ class ChirpSignal(Signal):
         """Chirp signal
 
         Args:
-            nsamples (int): number of sampling points
-            f0 (np.array): start frequency at time 0. An 1d array of size n
-            f1 (np.array): frequency at time t1. An 1d array of size n
-            t1 (np.array): time at which f1 is specified. An 1d array of size n
-            fs (int | float): sampling frequency
+            nsamples (int): Number of sampling points
+            f0 (np.array): Start frequency at time 0. An 1D array of size n
+            f1 (np.array): Frequency at time t1. An 1D array of size n
+            t1 (np.array): Time at which f1 is specified. An 1D array of size n
+            fs (int | float): Sampling frequency
         """
         super().__init__(nsamples, fs, rng)
 
         self._f0 = f0
         if t1 is None:
             t1 = np.full(f0.shape, nsamples / fs)
-        self._k = (f1 - f0) / t1  # rate of frequency change
+        self._k = (f1 - f0) / t1  # Rate of frequency change
 
     def gen(self, n, amp=None):
         super().gen(n, amp)
 
         signal = np.zeros((self.n, self._nsamples), dtype=np.complex_)
 
-        # generate signal one by one
+        # Generate signal one by one
         for i in range(self.n):
             sampling_time = np.arange(self._nsamples) * 1 / self._fs
             signal[i, :] = np.exp(1j * 2 * np.pi * (self._f0[i] * sampling_time

@@ -3,21 +3,22 @@ import numpy as np
 from scipy.signal import find_peaks
 
 
-def plot_spatial_specturm(spectrum, ground_truth, angle_grids,
+def plot_spatial_spectrum(spectrum, ground_truth, angle_grids,
                           peak_threshold=0.5, x_label="Angle",
-                          y_label="Spetrum"):
-    """绘制空间谱
+                          y_label="Spectrum"):
+    """Plot spatial spectrum
 
     Args:
-        spectrum: 算法估计的空间谱
-        ground_truth: 真是入射角度
-        angle_grids: 空间谱对应的角度网格点
-        peak_threshold: 用于寻找峰值的阈值(相对于最大值的比例)
-        x_label: x轴标度
-        y_label: y轴标度
+        spectrum: Spatial spectrum estimated by the algorithm
+        ground_truth: True incident angles
+        angle_grids: Angle grids corresponding to the spatial spectrum
+        peak_threshold: Threshold (relative to the maximum value) used to find
+            peaks
+        x_label: x-axis label
+        y_label: y-axis label
     """
     spectrum = spectrum / np.max(spectrum)
-    # find peaks and peaks' height
+    # find peaks and peak heights
     peaks_idx, heights = find_peaks(spectrum,
                                     height=np.max(spectrum) * peak_threshold)
     angles = angle_grids[peaks_idx]
@@ -59,16 +60,18 @@ def plot_spatial_specturm(spectrum, ground_truth, angle_grids,
 
 
 def plot_estimated_value(estimates, ground_truth, ticks_min=-90, ticks_max=90,
-                         x_label="Angle", y_label="Spetrum"):
-    """展示估计的角度值
+                         x_label="Angle", y_label="Spectrum"):
+    """Display estimated angle values
 
     Args:
-        estimates: 角度估计值
-        ground_truth: 真实入射角
-        ticks_min (int, optional): x轴刻度的最小值. Defaults to -90.
-        ticks_max (int, optional): x轴刻度的最大值. Defaults to 90.
-        x_label (str, optional): x轴标度. Defaults to "Angle".
-        y_label (str, optional): y轴标度. Defaults to "Spetrum".
+        estimates: Angle estimates
+        ground_truth: True incident angles
+        ticks_min (int, optional): Minimum value for x-axis ticks.
+            Defaults to -90.
+        ticks_max (int, optional): Maximum value for x-axis ticks.
+            Defaults to 90.
+        x_label (str, optional): x-axis label. Defaults to "Angle".
+        y_label (str, optional): y-axis label. Defaults to "Spetrum".
     """
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)

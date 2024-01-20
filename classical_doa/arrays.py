@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-C = 3e8  # 波速
+C = 3e8  # wave speed
 
 
 class Array(ABC):
@@ -24,40 +24,27 @@ class Array(ABC):
         """
         self._rng = rng
 
-    def steering_vector(self, fre, azimuth, elevation=None, unit="deg"):
-        """计算某一入射角度对应的导向矢量
-
-        Args:
-            fre (float): 入射信号的频率
-            azimuth (float): 入射信号的方位角
-            elevation (float): 入射信号的俯仰角. Defaults to None, 如果
-                `elevation` 为 None 只考虑一维信号.
-            unit (str): {'rad', 'deg'}, 入射角的角度制，'rad'代表弧度，
-                'deg'代表角度，默认为'deg'
-
-        Returns:
-            steering_vector (ndarray): 导向矢量
-        """
-        raise NotImplementedError()
-
     def received_signal(self, signal, snr, angle_incidence, amp=None,
                         broadband=False, unit="deg"):
         """Generate array received signal based on array signal model
 
-        如果`broadband`为True, 生成宽带信号的仿真.
+        If `broadband` is set to True, generate array received signal based on
+        broadband signal's model.
 
         Args:
-            signal: Signal 类实例化的对象
-            snr: 信噪比
-            angle_incidence: 入射角度. 如果只考虑方位角, `angle_incidence`是
-                一个1xN维矩阵; 如果考虑二维, `angle_incidence`是一个2xN维矩阵,
-                其中第一行为方位角, 第二行为俯仰角.
-            amp: 每个信号的幅度, 1d numpy array
-            broadband: 是否生成宽带接受信号
-            unit: 角度的单位制, `rad`代表弧度制, `deg`代表角度制. Defaults to
-                'deg'.
+            signal: An instance of the `Signal` class
+            snr: Signal-to-noise ratio
+            angle_incidence: Incidence angle. If only azimuth is considered,
+                `angle_incidence` is a 1xN dimensional matrix; if two dimensions
+                are considered, `angle_incidence` is a 2xN dimensional matrix,
+                where the first row is the azimuth and the second row is the
+                elevation angle.
+            amp: The amplitude of each signal, 1d numpy array
+            broadband: Whether to generate broadband received signals
+            unit: The unit of the angle, `rad` represents radian,
+                `deg` represents degree. Defaults to 'deg'.
         """
-        # 将角度转换为弧度
+        # Convert the angle from degree to radians
         if unit == 'deg':
             angle_incidence = angle_incidence / 180 * np.pi
 
@@ -87,24 +74,26 @@ class Array(ABC):
 
 class UniformLinearArray(Array):
     def __init__(self, m: int, dd: float, rng=None):
-        """均匀线阵
+        """Uniform linear array.
 
         Args:
             m (int): number of antenna elements
             dd (float): distance between adjacent antennas
             rng (np.random.Generator): random generator used to generator random
         """
-        # 阵元位置应该是一个Mx1维矩阵，用于后续计算导向矢量
+        # array position should be a 2d Mx1 numpy array
         super().__init__(np.arange(m).reshape(-1, 1) * dd, rng)
 
     def _gen_narrowband(self, signal, snr, angle_incidence, amp):
-        """ULA时, angle_incidence应该是一个对应方位角的行向量"""
+        """We only consider azimuth when use ULA, so `angle_incidence` should
+        be a 1xN array.
+        """
         azimuth = angle_incidence.reshape(1, -1)
         num_signal = azimuth.shape[1]
 
-        # 计算时延矩阵
+        # calculate the time delay matrix
         matrix_tau = 1 / C * self._element_position @ np.sin(azimuth)
-        # 计算流形矩阵
+        # calcualte the manifold matrix
         manifold_matrix = np.exp(-1j * 2 * np.pi * signal.frequency *
                                  matrix_tau)
 
