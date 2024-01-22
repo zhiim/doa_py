@@ -7,7 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from classical_doa.algorithm.broadband.imusic import imusic
 from classical_doa.arrays import UniformLinearArray
-from classical_doa.plot import plot_spatial_specturm
+from classical_doa.plot import plot_spatial_spectrum
 from classical_doa.signals import ChirpSignal
 
 # 仿真参数
@@ -39,5 +39,5 @@ spectrum = imusic(received_data=received_data, num_signal=num_signal,
                 array_position=array.array_position, fs=fs,
                 angle_grids=search_grids, num_groups=5, unit="deg")
 
-plot_spatial_specturm(spectrum=spectrum, ground_truth=angle_incidence,
+plot_spatial_spectrum(spectrum=spectrum, ground_truth=angle_incidence,
                       angle_grids=search_grids)

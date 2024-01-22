@@ -7,7 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from classical_doa.algorithm.broadband.cssm import cssm
 from classical_doa.arrays import UniformLinearArray
-from classical_doa.plot import plot_spatial_specturm
+from classical_doa.plot import plot_spatial_spectrum
 from classical_doa.signals import ChirpSignal
 
 # 仿真参数
@@ -40,5 +40,5 @@ spectrum = cssm(received_data=received_data, num_signal=num_signal,
                 angle_grids=search_grids, fre_ref=(max(f1) + min(f0))/2,
                 pre_estimate=np.array([-1, 29]), unit="deg")
 
-plot_spatial_specturm(spectrum=spectrum, ground_truth=angle_incidence,
+plot_spatial_spectrum(spectrum=spectrum, ground_truth=angle_incidence,
                       angle_grids=search_grids)
