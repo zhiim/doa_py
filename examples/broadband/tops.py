@@ -36,7 +36,7 @@ search_grids = np.arange(-90, 90, 1)
 
 num_signal = len(angle_incidence)
 spectrum = tops(received_data=received_data, num_signal=num_signal,
-                array_position=array.array_position, fs=fs, num_groups=5,
+                array=array, fs=fs, num_groups=5,
                 angle_grids=search_grids, fre_ref=4e6, unit="deg")
 
 plot_spatial_spectrum(spectrum=spectrum, ground_truth=angle_incidence,

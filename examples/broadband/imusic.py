@@ -36,8 +36,8 @@ search_grids = np.arange(-90, 90, 1)
 
 num_signal = len(angle_incidence)
 spectrum = imusic(received_data=received_data, num_signal=num_signal,
-                array_position=array.array_position, fs=fs,
+                array=array, fs=fs,
                 angle_grids=search_grids, num_groups=5, unit="deg")
 
 plot_spatial_spectrum(spectrum=spectrum, ground_truth=angle_incidence,
-                      angle_grids=search_grids)
+                      angle_grids=search_grids, peak_threshold=0.5)

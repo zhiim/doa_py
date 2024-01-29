@@ -3,14 +3,14 @@ import numpy as np
 C = 3e8
 
 
-def omp(received_data, num_signal, array_position, signal_fre, angle_grids,
+def omp(received_data, num_signal, array, signal_fre, angle_grids,
         unit="deg"):
     """OMP based sparse representation algorithms for DOA estimation
 
     Args:
         received_data : Array received signals
         num_signal : Number of signals
-        array_position : Position of array elements. It should be a numpy array
+        array : Instance of array class
         signal_fre: Signal frequency
         angle_grids : Angle grids corresponding to spatial spectrum. It should
             be a numpy array.
@@ -23,15 +23,10 @@ def omp(received_data, num_signal, array_position, signal_fre, angle_grids,
         Conference, 247-51, 2007.
         https://ieeexplore.ieee.org/abstract/document/7098802.
     """
-    if unit == "deg":
-        angle_grids = angle_grids / 180 * np.pi
+    angle_grids = angle_grids.reshape(-1,)
 
-    array_position = array_position.reshape(-1, 1)
-    angle_grids = angle_grids.reshape(1, -1)
-
-    # build the overcomplete basis
-    tau_all_grids = 1 / C * array_position @ np.sin(angle_grids)
-    matrix_a_over = np.exp(-1j * 2 * np.pi * signal_fre * tau_all_grids)
+    # # build the overcomplete basis
+    matrix_a_over = array.steering_vector(signal_fre, angle_grids, unit=unit)
 
     # initiate iteration
     atom_index = []
@@ -53,9 +48,6 @@ def omp(received_data, num_signal, array_position, signal_fre, angle_grids,
             ) @ chosen_atom.transpose().conj() @ received_data
         residual = received_data - chosen_atom @ sparse_vector
 
-    angles = angle_grids[0][atom_index]
-
-    if unit == "deg":
-        angles = angles / np.pi * 180
+    angles = angle_grids[atom_index]
 
     return np.sort(angles)

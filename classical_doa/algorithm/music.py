@@ -5,14 +5,14 @@ from classical_doa.algorithm.utils import get_noise_space
 C = 3e8
 
 
-def music(received_data, num_signal, array_position, signal_fre, angle_grids,
+def music(received_data, num_signal, array, signal_fre, angle_grids,
           unit="deg"):
     """1D MUSIC
 
     Args:
         received_data : Array received signals
         num_signal : Number of signals
-        array_position : Position of array elements. It should be a numpy array
+        array : Instance of array class
         signal_fre: Signal frequency
         angle_grids : Angle grids corresponding to spatial spectrum. It should
             be a numpy array.
@@ -21,17 +21,10 @@ def music(received_data, num_signal, array_position, signal_fre, angle_grids,
     """
     noise_space = get_noise_space(received_data, num_signal)
 
-    # Reshape to column vector for matrix calculations
-    array_position = np.reshape(array_position, (-1, 1))
-
-    if unit == "deg":
-        angle_grids = angle_grids / 180 * np.pi
-    angle_grids = np.reshape(angle_grids, (1, -1))
-
     # Calculate the manifold matrix when there are incident signal in all
     # grid points
-    tau_all_grids = 1 / C * array_position @ np.sin(angle_grids)
-    manifold_all_grids = np.exp(-1j * 2 * np.pi * signal_fre * tau_all_grids)
+    manifold_all_grids = array.steering_vector(signal_fre, angle_grids,
+                                               unit=unit)
 
     v = noise_space.transpose().conj() @ manifold_all_grids
 
@@ -42,14 +35,14 @@ def music(received_data, num_signal, array_position, signal_fre, angle_grids,
     return np.squeeze(spectrum)
 
 
-def root_music(received_data, num_signal, array_position, signal_fre,
+def root_music(received_data, num_signal, array, signal_fre,
                unit="deg"):
     """Root-MUSIC
 
     Args:
         received_data : Array of received signals
         num_signal : Number of signals
-        array_position : Position of array elements. It should be a numpy array
+        array : Instance of array class
         signal_fre: Signal frequency
         unit: The unit of the angle, `rad` represents radian, `deg` represents
             degree. Defaults to 'deg'.
@@ -61,8 +54,8 @@ def root_music(received_data, num_signal, array_position, signal_fre,
     """
     noise_space = get_noise_space(received_data, num_signal)
 
-    num_antennas = array_position.size
-    antenna_spacing = array_position[1] - array_position[0]
+    num_antennas = array.num_antennas
+    antenna_spacing = array.array_position[1] - array.array_position[0]
 
     # Since the polynomial solving function provided by numpy requires the
     # coefficients of the polynomial as input, and extracting the coefficients

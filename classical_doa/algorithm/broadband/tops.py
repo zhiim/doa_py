@@ -9,7 +9,7 @@ from classical_doa.algorithm.utils import (
 C = 3e8
 
 
-def tops(received_data, num_signal, array_position, fs, num_groups, angle_grids,
+def tops(received_data, num_signal, array, fs, num_groups, angle_grids,
          fre_ref, unit="deg"):
     """Test of orthogonality of projected subspaces (TOPS) method for wideband
     DOA estimation.
@@ -17,7 +17,7 @@ def tops(received_data, num_signal, array_position, fs, num_groups, angle_grids,
     Args:
         received_data: received signals from the array.
         num_signal: Number of signals.
-        array_position: Array element positions, should be a numpy array
+        array : Instance of array class
         fs: Sampling frequency.
         num_groups: Number of groups for FFT, each group performs an
             independent FFT.
@@ -31,11 +31,7 @@ def tops(received_data, num_signal, array_position, fs, num_groups, angle_grids,
         for Wideband Signals.” IEEE Transactions on Signal Processing 54, no. 6
         (June 2006): 1977-89. https://doi.org/10.1109/TSP.2006.872581.
     """
-    if unit == "deg":
-        angle_grids = angle_grids / 180 * np.pi
-
     num_antennas = received_data.shape[0]
-    array_position = array_position.reshape(-1, 1)
 
     signal_fre_bins, fre_bins = divide_into_fre_bins(received_data, num_groups,
                                                      fs)
@@ -56,8 +52,7 @@ def tops(received_data, num_signal, array_position, fs, num_groups, angle_grids,
                                             num_signal)
 
             # construct transformation matrix
-            matrix_phi = np.exp(-1j * 2 * np.pi * (fre - fre_ref) / C *
-                                array_position * np.sin(grid))
+            matrix_phi = array.steering_vector(fre - fre_ref, grid, unit=unit)
             matrix_phi = np.diag(np.squeeze(matrix_phi))
 
             # transform the signal subspace of the reference frequency to the
@@ -65,8 +60,7 @@ def tops(received_data, num_signal, array_position, fs, num_groups, angle_grids,
             matrix_u = matrix_phi @ signal_space_ref
 
             # construct projection matrix to reduce errors in matrix U
-            matrix_a_f = np.exp(-1j * 2 * np.pi * fre / C *
-                                array_position * np.sin(grid))
+            matrix_a_f = array.steering_vector(fre, grid, unit=unit)
             matrix_p = np.eye(num_antennas) -\
                 1 / (matrix_a_f.transpose().conj() @ matrix_a_f) *\
                     matrix_a_f @ matrix_a_f.transpose().conj()

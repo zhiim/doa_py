@@ -5,14 +5,14 @@ from classical_doa.algorithm.utils import get_signal_space
 C = 3e8
 
 
-def esprit(received_data, num_signal, array_position, signal_fre, unit="deg"):
+def esprit(received_data, num_signal, array, signal_fre, unit="deg"):
     """Total least-squares ESPRIT. Most names of matrix are taken directly from
     the reference paper.
 
     Args:
         received_data : Array received signals
         num_signal : Number of signals
-        array_position : Position of array elements. It should be a numpy array
+        array : Instance of array class
         signal_fre: Signal frequency
         unit : Unit of angle, 'rad' for radians, 'deg' for degrees. Defaults to
             'deg'.
@@ -30,7 +30,7 @@ def esprit(received_data, num_signal, array_position, signal_fre, unit="deg"):
     matrix_e_y = signal_space[1:, :]
     # the fixed distance of corresponding elements in two sub-array ensures
     # the rotational invariance
-    sub_array_spacing = array_position[1] - array_position[0]
+    sub_array_spacing = array.array_position[1] - array.array_position[0]
 
     matrix_c = np.hstack((matrix_e_x, matrix_e_y)).transpose().conj() @\
         np.hstack((matrix_e_x, matrix_e_y))

@@ -4,14 +4,14 @@ from classical_doa.algorithm.music import music
 from classical_doa.algorithm.utils import divide_into_fre_bins
 
 
-def imusic(received_data, num_signal, array_position, fs, angle_grids,
+def imusic(received_data, num_signal, array, fs, angle_grids,
            num_groups, unit="deg"):
     """Incoherent MUSIC estimator for wideband DOA estimation.
 
     Args:
         received_data : Array received signals
         num_signal : Number of signals
-        array_position : Position of array elements. It should be a numpy array
+        array : Instance of array class
         fs: sampling frequency
         angle_grids : Angle grids corresponding to spatial spectrum. It should
             be a numpy array.
@@ -34,7 +34,7 @@ def imusic(received_data, num_signal, array_position, fs, angle_grids,
     for i, fre in enumerate(fre_bins):
         spectrum_fre_bins[i, :] = music(received_data=signal_fre_bins[:, i, :],
                                         num_signal=num_signal,
-                                        array_position=array_position,
+                                        array=array,
                                         signal_fre=fre,
                                         angle_grids=angle_grids,
                                         unit=unit)

@@ -13,6 +13,11 @@ class Array(ABC):
             self._rng = np.random.default_rng()
 
     @property
+    @abstractmethod
+    def num_antennas(self):
+        raise NotImplementedError()
+
+    @property
     def array_position(self):
         return self._element_position
 
@@ -110,11 +115,15 @@ class UniformLinearArray(Array):
         # array position should be a 2d Mx1 numpy array
         super().__init__(np.arange(m).reshape(-1, 1) * dd, rng)
 
+    @property
+    def num_antennas(self):
+        return self._element_position.size
+
     def steering_vector(self, fre, angle_incidence, unit="deg"):
         angle_incidence = self._unify_unit(np.reshape(angle_incidence, (1, -1)),
                                            unit)
 
-        time_delay = 1 / C * self.array_position @ angle_incidence
+        time_delay = 1 / C * self.array_position @ np.sin(angle_incidence)
         steering_vector = np.exp(-1j * 2 * np.pi * fre * time_delay)
 
         return steering_vector

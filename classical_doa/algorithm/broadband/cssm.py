@@ -5,14 +5,14 @@ from classical_doa.algorithm.music import music
 C = 3e8
 
 
-def cssm(received_data, num_signal, array_position, fs, angle_grids, fre_ref,
+def cssm(received_data, num_signal, array, fs, angle_grids, fre_ref,
          pre_estimate, unit="deg"):
     """Coherent Signal Subspace Method (CSSM) for wideband DOA estimation.
 
     Args:
         received_data : Array received signals
         num_signal : Number of signals
-        array_position : Position of array elements. It should be a numpy array
+        array : Instance of array class
         fs: sampling frequency
         angle_grids : Angle grids corresponding to spatial spectrum. It should
             be a numpy array.
@@ -28,12 +28,8 @@ def cssm(received_data, num_signal, array_position, fs, angle_grids, fre_ref,
         33, no. 4 (August 1985): 823-31.
         https://doi.org/10.1109/TASSP.1985.1164667.
     """
-    if unit == "deg":
-        pre_estimate = pre_estimate / 180 * np.pi
-
     num_snapshots = received_data.shape[1]
     pre_estimate = pre_estimate.reshape(1, -1)
-    array_position = array_position.reshape(-1, 1)
 
     # Divide the received signal into multiple frequency points
     signal_fre_bins = np.fft.fft(received_data, axis=1)
@@ -41,14 +37,12 @@ def cssm(received_data, num_signal, array_position, fs, angle_grids, fre_ref,
 
     # Calculate the manifold matrix corresponding to the pre-estimated angles at
     # the reference frequency point
-    matrix_a_ref = np.exp(-1j * 2 * np.pi * fre_ref / C *\
-                          array_position @ pre_estimate)
+    matrix_a_ref = array.steering_vector(fre_ref, pre_estimate, unit=unit)
 
     for i, fre in enumerate(fre_bins):
         # Manifold matrix corresponding to the pre-estimated angles at
         # each frequency point
-        matrix_a_f = np.exp(-1j * 2 * np.pi * fre / C *\
-                            array_position @ np.sin(pre_estimate))
+        matrix_a_f = array.steering_vector(fre, pre_estimate, unit=unit)
         matrix_q = matrix_a_f @ matrix_a_ref.transpose().conj()
         # Perform singular value decomposition on matrix_q
         matrix_u, _, matrix_vh = np.linalg.svd(matrix_q)
@@ -59,7 +53,7 @@ def cssm(received_data, num_signal, array_position, fs, angle_grids, fre_ref,
         signal_fre_bins[:, i] = matrix_t_f @ signal_fre_bins[:, i]
 
     spectrum = music(received_data=signal_fre_bins, num_signal=num_signal,
-                     array_position=array_position, signal_fre=fre_ref,
+                     array=array, signal_fre=fre_ref,
                      angle_grids=angle_grids, unit=unit)
 
     return np.squeeze(spectrum)

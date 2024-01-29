@@ -36,7 +36,7 @@ search_grids = np.arange(-90, 90, 1)
 
 num_signal = len(angle_incidence)
 spectrum = cssm(received_data=received_data, num_signal=num_signal,
-                array_position=array.array_position, fs=fs,
+                array=array, fs=fs,
                 angle_grids=search_grids, fre_ref=(max(f1) + min(f0))/2,
                 pre_estimate=np.array([-1, 29]), unit="deg")
 

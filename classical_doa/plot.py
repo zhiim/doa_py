@@ -4,7 +4,7 @@ from scipy.signal import find_peaks
 
 
 def plot_spatial_spectrum(spectrum, ground_truth, angle_grids,
-                          peak_threshold=0.5, x_label="Angle",
+                          peak_threshold=0.2, x_label="Angle",
                           y_label="Spectrum"):
     """Plot spatial spectrum
 
@@ -12,15 +12,14 @@ def plot_spatial_spectrum(spectrum, ground_truth, angle_grids,
         spectrum: Spatial spectrum estimated by the algorithm
         ground_truth: True incident angles
         angle_grids: Angle grids corresponding to the spatial spectrum
-        peak_threshold: Threshold (relative to the maximum value) used to find
-            peaks
+        peak_threshold: Threshold used to find peaks in normalized spectrum
         x_label: x-axis label
         y_label: y-axis label
     """
     spectrum = spectrum / np.max(spectrum)
     # find peaks and peak heights
     peaks_idx, heights = find_peaks(spectrum,
-                                    height=np.max(spectrum) * peak_threshold)
+                                    height=peak_threshold)
     angles = angle_grids[peaks_idx]
     heights = heights["peak_heights"]
 
@@ -32,10 +31,9 @@ def plot_spatial_spectrum(spectrum, ground_truth, angle_grids,
     grids_max = angle_grids[-1]
     major_space = (grids_max - grids_min + 1) / 6
     minor_space = major_space / 5
-    major_ticks = np.arange(grids_min, grids_max, major_space)
-    minor_ticks = np.arange(grids_min, grids_max, minor_space)
-    ax.set_xticks(major_ticks)
-    ax.set_xticks(minor_ticks, minor=True)
+    ax.set_xlim(grids_min, grids_max)
+    ax.xaxis.set_major_locator(plt.MultipleLocator(major_space))
+    ax.xaxis.set_minor_locator(plt.MultipleLocator(minor_space))
 
     # plot spectrum
     ax.plot(angle_grids, spectrum)
@@ -77,12 +75,11 @@ def plot_estimated_value(estimates, ground_truth, ticks_min=-90, ticks_max=90,
     ax = fig.add_subplot(1, 1, 1)
 
     # set ticks
-    major_space = (ticks_min - ticks_max + 1) / 6
+    major_space = (ticks_max - ticks_min) / 6
     minor_space = major_space / 5
-    major_ticks = np.arange(ticks_min, ticks_max, major_space)
-    minor_ticks = np.arange(ticks_min, ticks_max, minor_space)
-    ax.set_xticks(major_ticks)
-    ax.set_xticks(minor_ticks, minor=True)
+    ax.set_xlim(ticks_min, ticks_max)
+    ax.xaxis.set_major_locator(plt.MultipleLocator(major_space))
+    ax.xaxis.set_minor_locator(plt.MultipleLocator(minor_space))
 
     # ground truth
     for angle in ground_truth:
