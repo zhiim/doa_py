@@ -67,7 +67,7 @@ def root_music(received_data, num_signal, array, signal_fre,
 
     # Compute the coefficients for the polynomial.
     matrix_c = noise_space @ noise_space.transpose().conj()
-    coeff = np.zeros((num_antennas - 1,), dtype=np.complex_)
+    coeff = np.zeros((num_antennas - 1,), dtype=np.complex128)
     for i in range(1, num_antennas):
         coeff[i - 1] += np.sum(np.diag(matrix_c, i))
     coeff = np.hstack((coeff[::-1], np.sum(np.diag(matrix_c)), coeff.conj()))

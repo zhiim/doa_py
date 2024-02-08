@@ -111,7 +111,7 @@ class ChirpSignal(Signal):
     def gen(self, n, amp=None):
         super().gen(n, amp)
 
-        signal = np.zeros((self.n, self._nsamples), dtype=np.complex_)
+        signal = np.zeros((self.n, self._nsamples), dtype=np.complex128)
 
         # Generate signal one by one
         for i in range(self.n):

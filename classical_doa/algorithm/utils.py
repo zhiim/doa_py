@@ -53,7 +53,7 @@ def divide_into_fre_bins(received_data, num_groups, fs):
         n_fft = n_each_group
 
     signal_fre_bins = np.zeros((received_data.shape[0], n_fft, num_groups),
-                               dtype=np.complex_)
+                               dtype=np.complex128)
     # do FTT separately in each group
     for group_i in range(num_groups):
         signal_fre_bins[:, :, group_i] = np.fft.fft(
