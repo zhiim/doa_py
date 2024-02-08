@@ -1,13 +1,7 @@
 import numpy as np
 
 
-def get_noise_space(received_data, num_signal):
-    num_snapshots = received_data.shape[1]
-
-    # compute corvariance matrix
-    corvariance_matrix = 1 / num_snapshots *\
-        (received_data @ received_data.transpose().conj())
-
+def get_noise_space(corvariance_matrix, num_signal):
     eigenvalues, eigenvectors = np.linalg.eig(corvariance_matrix)
     sorted_index = np.argsort(np.abs(eigenvalues))  # ascending order
     noise_space = eigenvectors[:, sorted_index[:-num_signal]]
@@ -15,13 +9,7 @@ def get_noise_space(received_data, num_signal):
     return noise_space
 
 
-def get_signal_space(received_data, num_signal):
-    num_snapshots = received_data.shape[1]
-
-    # compute corvariance matrix
-    corvariance_matrix = 1 / num_snapshots *\
-        (received_data @ received_data.transpose().conj())
-
+def get_signal_space(corvariance_matrix, num_signal):
     eigenvalues, eigenvectors = np.linalg.eig(corvariance_matrix)
     sorted_index = np.argsort(np.abs(eigenvalues))  # ascending order
     noise_space = eigenvectors[:, sorted_index[-num_signal:]]

@@ -180,7 +180,6 @@ class UniformLinearArray(Array):
         element_position_z = np.zeros(m)
         element_position = np.vstack((element_position_x, element_position_y,
                                       element_position_z)).T
-
         super().__init__(element_position, rng)
 
 
@@ -196,10 +195,15 @@ class UniformCircularArray(Array):
             r (float): Radius of the circular array.
             rng (optional): Random number generator. Defaults to None.
         """
+        self._radius = r
+
         element_position_x = r * np.cos(2 * np.pi * np.arange(m) / m)
         element_position_y = r * np.sin(2 * np.pi * np.arange(m) / m)
         element_position_z = np.zeros(m)
         element_position = np.vstack((element_position_x, element_position_y,
                                       element_position_z)).T
-
         super().__init__(element_position, rng)
+
+    @property
+    def radius(self):
+        return self._radius

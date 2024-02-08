@@ -39,16 +39,18 @@ def tops(received_data, num_signal, array, fs, num_groups, angle_grids,
     # index of reference frequency in FFT output
     ref_index = int(fre_ref / (fs / fre_bins.size))
     # get signal space of reference frequency
-    signal_space_ref = get_signal_space(signal_fre_bins[:, ref_index, :],
-                                        num_signal=num_signal)
+    signal_space_ref = get_signal_space(
+        np.cov(signal_fre_bins[:, ref_index, :]),
+        num_signal=num_signal
+        )
 
     spectrum = np.zeros(angle_grids.size)
     for i, grid in enumerate(angle_grids):
-        matrix_d = np.empty((num_signal, 0), dtype=np.complex_)
+        matrix_d = np.empty((num_signal, 0), dtype=np.complex128)
 
         for j, fre in enumerate(fre_bins):
             # calculate noise subspace for the current frequency point
-            noise_space_f = get_noise_space(signal_fre_bins[:, j, :],
+            noise_space_f = get_noise_space(np.cov(signal_fre_bins[:, j, :]),
                                             num_signal)
 
             # construct transformation matrix

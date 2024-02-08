@@ -19,7 +19,7 @@ def music(received_data, num_signal, array, signal_fre, angle_grids,
         unit : Unit of angle, 'rad' for radians, 'deg' for degrees. Defaults to
             'deg'.
     """
-    noise_space = get_noise_space(received_data, num_signal)
+    noise_space = get_noise_space(np.cov(received_data), num_signal)
 
     # Calculate the manifold matrix when there are incident signal in all
     # grid points
@@ -52,7 +52,7 @@ def root_music(received_data, num_signal, array, signal_fre,
         IEEE Transactions on Acoustics, Speech, and Signal Processing 37,
         no. 12 (December 1989): 1939-49. https://doi.org/10.1109/29.45540.
     """
-    noise_space = get_noise_space(received_data, num_signal)
+    noise_space = get_noise_space(np.cov(received_data), num_signal)
 
     num_antennas = array.num_antennas
     antenna_spacing = array.array_position[1] - array.array_position[0]
@@ -87,3 +87,63 @@ def root_music(received_data, num_signal, array, signal_fre,
         angles = angles / np.pi * 180
 
     return np.sort(angles)
+
+def uca_rb_music(received_data, num_signal, array, signal_fre, angle_grids,
+                 unit="deg"):
+    """form MUSIC for Uniform Circular Array (UCA)
+
+    Args:
+        received_data (_type_): _description_
+        num_signal (_type_): _description_
+        array (_type_): _description_
+        signal_fre (_type_): _description_
+        angle_grids (_type_): _description_
+        unit (str, optional): _description_. Defaults to "deg".
+
+    References:
+        Mathews, C.P., and M.D. Zoltowski. “Eigenstructure Techniques for 2-D
+        Angle Estimation with Uniform Circular Arrays.” IEEE Transactions on
+        Signal Processing 42, no. 9 (September 1994): 2395-2407.
+        https://doi.org/10.1109/78.317861.
+    """
+    # max number of phase modes can be excitated
+    m = np.floor(2 * np.pi * array.radius / (C / signal_fre))
+
+    matrix_c_v = np.diag(
+        1j ** np.concatenate((
+            np.arange(-m, 0),
+            np.arange(0, -m -1 , step=-1)
+            ))
+        )
+    matrix_v = 1 / np.sqrt(array.num_antennas) * np.exp(
+        -1j * 2 * np.pi *\
+        np.arange(0, array.num_antennas).reshape(-1, 1) @\
+        np.arange(-m, m+1).reshape(1, -1) / array.num_antennas
+        )
+    matrix_f_e = matrix_v @ matrix_c_v.conj().transpose()
+    matrix_w = 1 / np.sqrt(1 * m + 1) * np.exp(
+        1j * 2 * np.pi *\
+        np.arange(-m, m+1).reshape(-1, 1) @\
+        np.arange(-m, m+1).reshape(1, -1) / (2 * m + 1)
+        )
+    matrix_f_r = matrix_f_e @ matrix_w
+
+    # beamspace data vector
+    beamspace_data = matrix_f_r.conj().transpose() @ received_data
+
+    # only use the real part of covariance matrix
+    cov_real = np.real(np.cov(beamspace_data))
+    noise_space = get_noise_space(cov_real, num_signal)
+
+    # Calculate the manifold matrix when there are incident signal in all
+    # grid points
+    manifold_all_grids = array.steering_vector(signal_fre, angle_grids,
+                                               unit=unit)
+
+    v = noise_space.transpose().conj() @ manifold_all_grids
+
+    # Each column of matrix v corresponds to an incident signal, calculate the
+    # square of the 2-norm for each column
+    spectrum = 1 / np.linalg.norm(v, axis=0) ** 2
+
+    return np.squeeze(spectrum)
