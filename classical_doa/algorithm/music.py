@@ -88,8 +88,8 @@ def root_music(received_data, num_signal, array, signal_fre,
 
     return np.sort(angles)
 
-def uca_rb_music(received_data, num_signal, array, signal_fre, angle_grids,
-                 unit="deg"):
+def uca_rb_music(received_data, num_signal, array, signal_fre, azimuth_grids,
+                 elevation_grids, unit="deg"):
     """form MUSIC for Uniform Circular Array (UCA)
 
     Args:
@@ -135,15 +135,20 @@ def uca_rb_music(received_data, num_signal, array, signal_fre, angle_grids,
     cov_real = np.real(np.cov(beamspace_data))
     noise_space = get_noise_space(cov_real, num_signal)
 
-    # Calculate the manifold matrix when there are incident signal in all
-    # grid points
-    manifold_all_grids = array.steering_vector(signal_fre, angle_grids,
-                                               unit=unit)
+    spectrum = np.zeros((azimuth_grids.size, elevation_grids.size))
+    for i, elevation in enumerate(elevation_grids):
+        angle_grids = np.vstack(
+            (azimuth_grids, elevation * np.ones_like(azimuth_grids))
+            )
+        # Calculate the manifold matrix when there are incident signal in all
+        # grid points
+        manifold_all_grids = array.steering_vector(signal_fre, angle_grids,
+                                                unit=unit)
 
-    v = noise_space.transpose().conj() @ manifold_all_grids
+        v = noise_space.transpose().conj() @ manifold_all_grids
 
-    # Each column of matrix v corresponds to an incident signal, calculate the
-    # square of the 2-norm for each column
-    spectrum = 1 / np.linalg.norm(v, axis=0) ** 2
+        # Each column of matrix v corresponds to an incident signal, calculate
+        # the square of the 2-norm for each column
+        spectrum[:, i] = 1 / np.linalg.norm(v, axis=0) ** 2
 
-    return np.squeeze(spectrum)
+    return spectrum
