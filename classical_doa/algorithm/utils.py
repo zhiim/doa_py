@@ -12,9 +12,9 @@ def get_noise_space(corvariance_matrix, num_signal):
 def get_signal_space(corvariance_matrix, num_signal):
     eigenvalues, eigenvectors = np.linalg.eig(corvariance_matrix)
     sorted_index = np.argsort(np.abs(eigenvalues))  # ascending order
-    noise_space = eigenvectors[:, sorted_index[-num_signal:]]
+    signal_space = eigenvectors[:, sorted_index[-num_signal:]]
 
-    return noise_space
+    return signal_space
 
 
 def divide_into_fre_bins(received_data, num_groups, fs):
