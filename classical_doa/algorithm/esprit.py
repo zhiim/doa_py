@@ -56,3 +56,60 @@ def esprit(received_data, num_signal, array, signal_fre, unit="deg"):
         angles = angles / np.pi * 180
 
     return np.sort(angles)
+
+def uca_esprit(received_data, num_signal, array, signal_fre, azimuth_grids,
+               elevation_grids, unit="deg"):
+    # max number of phase modes can be excitated
+    m = int(np.floor(2 * np.pi * array.radius / (C / signal_fre)))
+
+    matrix_c_v = np.diag(
+        1j ** np.concatenate((
+            np.arange(-m, 0),
+            np.arange(0, -m -1 , step=-1)
+            ))
+        )
+    matrix_v = 1 / np.sqrt(array.num_antennas) * np.exp(
+        -1j * 2 * np.pi *\
+        np.arange(0, array.num_antennas).reshape(-1, 1) @\
+        np.arange(-m, m+1).reshape(1, -1) / array.num_antennas
+        )
+    matrix_f_e = matrix_v @ matrix_c_v.conj().transpose()
+    matrix_w = 1 / np.sqrt(2 * m + 1) * np.exp(
+        1j * 2 * np.pi *\
+        np.arange(-m, m+1).reshape(-1, 1) @\
+        np.arange(-m, m+1).reshape(1, -1) / (2 * m + 1)
+        )
+    matrix_f_r = matrix_f_e @ matrix_w
+
+    # beamspace data vector
+    beamspace_data = matrix_f_r.conj().transpose() @ received_data
+
+    # only use the real part of covariance matrix
+    cov_real = np.real(np.cov(beamspace_data))
+    signal_space = get_signal_space(cov_real, num_signal)
+
+    matrix_c_o = np.diag(
+        (-1) ** np.concatenate((
+            np.arange(m, -1, step=-1),
+            np.zeros(m)
+            ))
+        )
+    signal_space = matrix_c_o @ matrix_w @ signal_space
+
+    s1 = signal_space[:-2, :]
+    s2 = signal_space[1:-1, :]
+    s3 = signal_space[2:, :]
+
+    matrix_gamma = (1 / np.pi / array.radius) * np.diag(np.arange(-(m-1), m))
+    matrix_e = np.hstack((s1, s3))
+    matrix_psi_hat = np.linalg.inv(matrix_e.conj().transpose() @ matrix_e) @\
+        matrix_e.conj().transpose() @ matrix_gamma @ s2
+    matrix_psi = matrix_psi_hat[:len(matrix_psi_hat)//2, :]
+
+    eig_values = np.linalg.eigvals(matrix_psi)
+
+    elevation = np.arccos(np.abs(eig_values)) / np.pi * 180
+    azimuth = np.angle(-eig_values) / np.pi * 180
+
+    return elevation, azimuth
+

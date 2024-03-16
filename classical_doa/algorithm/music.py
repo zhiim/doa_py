@@ -88,6 +88,7 @@ def root_music(received_data, num_signal, array, signal_fre,
 
     return np.sort(angles)
 
+
 def uca_rb_music(received_data, num_signal, array, signal_fre, azimuth_grids,
                  elevation_grids, unit="deg"):
     """form MUSIC for Uniform Circular Array (UCA)
