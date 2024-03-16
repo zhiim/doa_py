@@ -57,8 +57,23 @@ def esprit(received_data, num_signal, array, signal_fre, unit="deg"):
 
     return np.sort(angles)
 
-def uca_esprit(received_data, num_signal, array, signal_fre, azimuth_grids,
-               elevation_grids, unit="deg"):
+def uca_esprit(received_data, num_signal, array, signal_fre, unit="deg"):
+    """UCA-ESPRIT for Uniform Circular Array.
+
+    Args:
+        received_data : Array received signals
+        num_signal : Number of signals
+        array : Instance of array class
+        signal_fre: Signal frequency
+        unit : Unit of angle, 'rad' for radians, 'deg' for degrees. Defaults to
+            'deg'.
+
+    Reference:
+        Mathews, C.P., and M.D. Zoltowski. “Eigenstructure Techniques for 2-D
+        Angle Estimation with Uniform Circular Arrays.” IEEE Transactions on
+        Signal Processing 42, no. 9 (September 1994): 2395-2407.
+        https://doi.org/10.1109/78.317861.
+    """
     # max number of phase modes can be excitated
     m = int(np.floor(2 * np.pi * array.radius / (C / signal_fre)))
 
@@ -108,8 +123,12 @@ def uca_esprit(received_data, num_signal, array, signal_fre, azimuth_grids,
 
     eig_values = np.linalg.eigvals(matrix_psi)
 
-    elevation = np.arccos(np.abs(eig_values)) / np.pi * 180
-    azimuth = np.angle(-eig_values) / np.pi * 180
+    elevation = np.arccos(np.abs(eig_values))
+    azimuth = np.angle(-eig_values)
 
-    return elevation, azimuth
+    if unit == "deg":
+        elevation = elevation / np.pi * 180
+        azimuth = azimuth / np.pi * 180
+
+    return azimuth, elevation
 

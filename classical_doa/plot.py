@@ -99,6 +99,7 @@ def plot_estimated_value(estimates, ground_truth, ticks_min=-90, ticks_max=90,
 
     plt.show()
 
+
 def plot_spatial_spectrum_2d(spectrum, ground_truth, azimuth_grids,
                              elevation_grids,
                              x_label="Elevation", y_label="Azimuth",
@@ -144,5 +145,49 @@ def plot_spatial_spectrum_2d(spectrum, ground_truth, azimuth_grids,
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
     ax.set_zlabel(z_label)
+
+    plt.show()
+
+
+def plot_estimated_value_2d(estimated_azimuth, estimated_elevation,
+                            ground_truth, unit="deg",
+                            x_label="Angle", y_label="Spectrum"):
+    """Display estimated angle values
+
+    Args:
+        estimates: Angle estimates
+        ground_truth: True incident angles
+        ticks_min (int, optional): Minimum value for x-axis ticks.
+            Defaults to -90.
+        ticks_max (int, optional): Maximum value for x-axis ticks.
+            Defaults to 90.
+        x_label (str, optional): x-axis label. Defaults to "Angle".
+        y_label (str, optional): y-axis label. Defaults to "Spetrum".
+    """
+    if unit == "deg":
+        estimated_azimuth = estimated_azimuth / 180 * np.pi
+        ground_truth = ground_truth.astype(float)
+        ground_truth[0] = ground_truth[0] / 180 * np.pi
+
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1, projection="polar")
+
+    ax.scatter(ground_truth[0], ground_truth[1], marker="o", color="g")
+    ax.scatter(estimated_azimuth, estimated_elevation, marker="x", color="r")
+
+    ax.set_rlabel_position(90)
+
+    for i in range(len(estimated_azimuth)):
+        ax.annotate(
+            "({:.2f}, {:.2f})".format(estimated_azimuth[i] / np.pi * 180,
+                                      estimated_elevation[i]),
+            (estimated_azimuth[i], estimated_elevation[i])
+            )
+
+    ax.set_xticks(np.arange(0, 2 * np.pi, step=np.pi / 6))
+    ax.set_rlim([0, 90])
+    ax.set_yticks(np.arange(0, 90, step=15))
+
+    ax.legend(["Ground Truth", "Estimated"])
 
     plt.show()
