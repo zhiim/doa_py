@@ -121,7 +121,7 @@ def uca_rb_music(received_data, num_signal, array, signal_fre, azimuth_grids,
         np.arange(-m, m+1).reshape(1, -1) / array.num_antennas
         )
     matrix_f_e = matrix_v @ matrix_c_v.conj().transpose()
-    matrix_w = 1 / np.sqrt(1 * m + 1) * np.exp(
+    matrix_w = 1 / np.sqrt(2 * m + 1) * np.exp(
         1j * 2 * np.pi *\
         np.arange(-m, m+1).reshape(-1, 1) @\
         np.arange(-m, m+1).reshape(1, -1) / (2 * m + 1)
@@ -144,6 +144,7 @@ def uca_rb_music(received_data, num_signal, array, signal_fre, azimuth_grids,
         # grid points
         manifold_all_grids = array.steering_vector(signal_fre, angle_grids,
                                                 unit=unit)
+        manifold_all_grids = matrix_f_r.conj().transpose() @ manifold_all_grids
 
         v = noise_space.transpose().conj() @ manifold_all_grids
 

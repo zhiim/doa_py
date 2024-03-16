@@ -75,7 +75,7 @@ Check `examples` for more examples.
     - [x] OMP
     - [ ] l1-SVD
 * UCA
-    - [ ] UCA-RB-MUSIC
+    - [x] UCA-RB-MUSIC
     - [ ] UCA-ESPRIT
 * Broadband
     - [x] ISSM

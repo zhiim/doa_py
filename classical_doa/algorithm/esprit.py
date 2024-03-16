@@ -23,14 +23,14 @@ def esprit(received_data, num_signal, array, signal_fre, unit="deg"):
         Speech, and Signal Processing 37, no. 7 (July 1989): 984-95.
         https://doi.org/10.1109/29.32276.
     """
-    signal_space = get_signal_space(received_data, num_signal)
+    signal_space = get_signal_space(np.cov(received_data), num_signal)
 
     # get signal space of two sub array. Each sub array consists of M-1 antennas
     matrix_e_x = signal_space[:-1, :]
     matrix_e_y = signal_space[1:, :]
     # the fixed distance of corresponding elements in two sub-array ensures
     # the rotational invariance
-    sub_array_spacing = array.array_position[1] - array.array_position[0]
+    sub_array_spacing = array.array_position[1][1] - array.array_position[0][1]
 
     matrix_c = np.hstack((matrix_e_x, matrix_e_y)).transpose().conj() @\
         np.hstack((matrix_e_x, matrix_e_y))

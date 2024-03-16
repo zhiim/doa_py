@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import find_peaks
+from skimage.feature import peak_local_max
 
 
 def plot_spatial_spectrum(spectrum, ground_truth, angle_grids,
@@ -95,5 +96,53 @@ def plot_estimated_value(estimates, ground_truth, ticks_min=-90, ticks_max=90,
 
     # set legend
     ax.legend([truth_line, estimate_line], ["Ground Truth", "Estimated"])
+
+    plt.show()
+
+def plot_spatial_spectrum_2d(spectrum, ground_truth, azimuth_grids,
+                             elevation_grids,
+                             x_label="Elevation", y_label="Azimuth",
+                             z_label="Spectrum"):
+    """Plot 2D spatial spectrum
+
+    Args:
+        spectrum: Spatial spectrum estimated by the algorithm
+        ground_truth: True incident angles
+        azimuth_grids : Azimuth grids corresponding to the spatial spectrum
+        elevation_grids : Elevation grids corresponding to the spatial spectrum
+        x_label: x-axis label
+        y_label: y-axis label
+        z_label : x-axis label. Defaults to "Spectrum".
+    """
+    x, y = np.meshgrid(elevation_grids, azimuth_grids)
+    spectrum = spectrum / spectrum.max()
+    # Find the peaks in the surface
+    peaks = peak_local_max(spectrum, num_peaks=ground_truth.shape[1])
+    spectrum = np.log(spectrum + 1e-10)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1, projection="3d")
+
+    # plot spectrum
+    surf = ax.plot_surface(x, y, spectrum, cmap='viridis', antialiased=True)
+    # Plot the peaks on the surface
+    for peak in peaks:
+        peak_dot = ax.scatter(x[peak[0], peak[1]], y[peak[0], peak[1]],
+                              spectrum[peak[0], peak[1]], c='r', marker='x')
+        ax.text(x[peak[0], peak[1]], y[peak[0], peak[1]],
+                spectrum[peak[0], peak[1]],
+                "({}, {})".format(x[peak[0], peak[1]], y[peak[0], peak[1]]))
+    # plot ground truth
+    truth_lines = ax.stem(ground_truth[1], ground_truth[0],
+                          np.ones_like(ground_truth[0]),
+                          bottom=spectrum.min(), linefmt='g--', markerfmt=' ',
+                          basefmt=' ')
+
+    ax.legend([surf, truth_lines, peak_dot],
+              ["Spectrum", "Estimated", "Ground Truth"])
+
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.set_zlabel(z_label)
 
     plt.show()

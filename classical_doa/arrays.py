@@ -6,10 +6,13 @@ C = 3e8  # wave speed
 
 
 class Array(ABC):
-    def __init__(self, element_position, rng=None):
+    def __init__(self, element_position_x, element_position_y,
+                 element_position_z, rng=None):
         """element position should be defined in 3D (x, y, z) coordinate
         system"""
-        self._element_position = element_position
+        self._element_position = np.vstack((element_position_x,
+                                            element_position_y,
+                                            element_position_z)).T
 
         if rng is None:
             self._rng = np.random.default_rng()
@@ -178,9 +181,9 @@ class UniformLinearArray(Array):
         element_position_x = np.zeros(m)
         element_position_y = np.arange(m) * dd
         element_position_z = np.zeros(m)
-        element_position = np.vstack((element_position_x, element_position_y,
-                                      element_position_z)).T
-        super().__init__(element_position, rng)
+
+        super().__init__(element_position_x, element_position_y,
+                         element_position_z, rng)
 
 
 class UniformCircularArray(Array):
@@ -200,9 +203,9 @@ class UniformCircularArray(Array):
         element_position_x = r * np.cos(2 * np.pi * np.arange(m) / m)
         element_position_y = r * np.sin(2 * np.pi * np.arange(m) / m)
         element_position_z = np.zeros(m)
-        element_position = np.vstack((element_position_x, element_position_y,
-                                      element_position_z)).T
-        super().__init__(element_position, rng)
+
+        super().__init__(element_position_x, element_position_y,
+                         element_position_z, rng)
 
     @property
     def radius(self):

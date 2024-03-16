@@ -26,7 +26,8 @@ setup(
     install_requires=[
         'numpy',
         'matplotlib',
-        'scipy'
+        'scipy',
+        'scikit-image'
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',
