@@ -27,7 +27,8 @@ setup(
         'numpy',
         'matplotlib',
         'scipy',
-        'scikit-image'
+        'scikit-image',
+        'cvxpy'
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',
