@@ -55,7 +55,7 @@ def root_music(received_data, num_signal, array, signal_fre,
     noise_space = get_noise_space(np.cov(received_data), num_signal)
 
     num_antennas = array.num_antennas
-    antenna_spacing = array.array_position[1] - array.array_position[0]
+    antenna_spacing = array.array_position[1][1] - array.array_position[0][1]
 
     # Since the polynomial solving function provided by numpy requires the
     # coefficients of the polynomial as input, and extracting the coefficients
