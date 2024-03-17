@@ -5,7 +5,7 @@ from skimage.feature import peak_local_max
 
 
 def plot_spatial_spectrum(spectrum, ground_truth, angle_grids,
-                          peak_threshold=0.2, x_label="Angle",
+                          num_signal, x_label="Angle",
                           y_label="Spectrum"):
     """Plot spatial spectrum
 
@@ -13,16 +13,19 @@ def plot_spatial_spectrum(spectrum, ground_truth, angle_grids,
         spectrum: Spatial spectrum estimated by the algorithm
         ground_truth: True incident angles
         angle_grids: Angle grids corresponding to the spatial spectrum
-        peak_threshold: Threshold used to find peaks in normalized spectrum
+        num_signal: Number of signals
         x_label: x-axis label
         y_label: y-axis label
     """
     spectrum = spectrum / np.max(spectrum)
     # find peaks and peak heights
-    peaks_idx, heights = find_peaks(spectrum,
-                                    height=peak_threshold)
+    peaks_idx, heights = find_peaks(spectrum, height=0)
+
+    idx = heights["peak_heights"].argsort()[-num_signal:]
+    peaks_idx = peaks_idx[idx]
+    heights = heights["peak_heights"][idx]
+
     angles = angle_grids[peaks_idx]
-    heights = heights["peak_heights"]
 
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)

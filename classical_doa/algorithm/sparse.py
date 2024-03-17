@@ -56,6 +56,24 @@ def omp(received_data, num_signal, array, signal_fre, angle_grids,
 
 def l1_svd(received_data, num_signal, array, signal_fre, angle_grids,
            unit="deg"):
+    """L1 norm based sparse representation algorithms for DOA estimation
+
+    Args:
+        received_data : Array received signals
+        num_signal : Number of signals
+        array : Instance of array class
+        signal_fre: Signal frequency
+        angle_grids : Angle grids corresponding to spatial spectrum. It should
+            be a numpy array.
+        unit : Unit of angle, 'rad' for radians, 'deg' for degrees. Defaults to
+            'deg'.
+
+    Reference:
+        Malioutov, D., M. Cetin, and A.S. Willsky. “A Sparse Signal
+        Reconstruction Perspective for Source Localization with Sensor Arrays.”
+        IEEE Transactions on Signal Processing 53, no. 8 (August 2005): 3010-22.
+        https://doi.org/10.1109/TSP.2005.850882.
+    """
     # build the overcomplete basis
     a_over = array.steering_vector(signal_fre, angle_grids, unit=unit)
 
