@@ -58,6 +58,8 @@ Check `examples` for more examples.
 ### Array Structures
 
 * Uniform Linear Array (ULA)  
+* Uniform Rectangular Array (URA, to be implemented)
+* Uniform Circular Array (UCA)
 
 ### Signal Models
 
@@ -73,7 +75,10 @@ Check `examples` for more examples.
     - [x] ESPRIT
     - [x] Root-MUSIC
     - [x] OMP
-    - [ ] l1-SVD
+    - [x] l1-SVD
+* URA
+    - [ ] URA-MUSIC
+    - [ ] URA-ESPRIT
 * UCA
     - [x] UCA-RB-MUSIC
     - [x] UCA-ESPRIT
