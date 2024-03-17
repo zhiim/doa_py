@@ -1,4 +1,5 @@
 import numpy as np
+import cvxpy as cp
 
 C = 3e8
 
@@ -51,3 +52,40 @@ def omp(received_data, num_signal, array, signal_fre, angle_grids,
     angles = angle_grids[atom_index]
 
     return np.sort(angles)
+
+
+def l1_svd(received_data, num_signal, array, signal_fre, angle_grids,
+           unit="deg"):
+    # build the overcomplete basis
+    a_over = array.steering_vector(signal_fre, angle_grids, unit=unit)
+
+    num_samples = received_data.shape[1]
+
+    _, _, vh = np.linalg.svd(received_data)
+
+    d_k = np.vstack((np.eye(num_signal),
+                    np.zeros((num_samples - num_signal, num_signal))))
+    y_sv = received_data @ vh.conj().transpose() @ d_k
+
+    # solve the l1 norm problem using cvxpy
+    p = cp.Variable()
+    q = cp.Variable()
+    r = cp.Variable(len(angle_grids))
+    s_sv = cp.Variable((len(angle_grids), num_signal), complex=True)
+
+    # constraints of the problem
+    constraints = [cp.norm(y_sv - a_over @ s_sv, "fro") <= p,
+                   cp.sum(r) <= q]
+    for i in range(len(angle_grids)):
+        constraints.append(cp.norm(s_sv[i, :]) <= r[i])
+
+    # objective function
+    objective = cp.Minimize(p + 2 * q)
+    prob = cp.Problem(objective, constraints)
+
+    prob.solve()
+
+    spectrum = s_sv.value
+    spectrum = np.sum(np.abs(spectrum), axis=1)
+
+    return spectrum
