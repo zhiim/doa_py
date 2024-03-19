@@ -4,9 +4,14 @@ from scipy.signal import find_peaks
 from skimage.feature import peak_local_max
 
 
-def plot_spatial_spectrum(spectrum, ground_truth, angle_grids,
-                          num_signal, x_label="Angle",
-                          y_label="Spectrum"):
+def plot_spatial_spectrum(
+    spectrum,
+    ground_truth,
+    angle_grids,
+    num_signal,
+    x_label="Angle",
+    y_label="Spectrum",
+):
     """Plot spatial spectrum
 
     Args:
@@ -41,7 +46,7 @@ def plot_spatial_spectrum(spectrum, ground_truth, angle_grids,
 
     # plot spectrum
     ax.plot(angle_grids, spectrum)
-    ax.set_yscale('log')
+    ax.set_yscale("log")
 
     # plot peaks
     ax.scatter(angles, heights, color="red", marker="x")
@@ -61,8 +66,14 @@ def plot_spatial_spectrum(spectrum, ground_truth, angle_grids,
     plt.show()
 
 
-def plot_estimated_value(estimates, ground_truth, ticks_min=-90, ticks_max=90,
-                         x_label="Angle", y_label="Spectrum"):
+def plot_estimated_value(
+    estimates,
+    ground_truth,
+    ticks_min=-90,
+    ticks_max=90,
+    x_label="Angle",
+    y_label="Spectrum",
+):
     """Display estimated angle values
 
     Args:
@@ -103,10 +114,15 @@ def plot_estimated_value(estimates, ground_truth, ticks_min=-90, ticks_max=90,
     plt.show()
 
 
-def plot_spatial_spectrum_2d(spectrum, ground_truth, azimuth_grids,
-                             elevation_grids,
-                             x_label="Elevation", y_label="Azimuth",
-                             z_label="Spectrum"):
+def plot_spatial_spectrum_2d(
+    spectrum,
+    ground_truth,
+    azimuth_grids,
+    elevation_grids,
+    x_label="Elevation",
+    y_label="Azimuth",
+    z_label="Spectrum",
+):
     """Plot 2D spatial spectrum
 
     Args:
@@ -128,22 +144,36 @@ def plot_spatial_spectrum_2d(spectrum, ground_truth, azimuth_grids,
     ax = fig.add_subplot(1, 1, 1, projection="3d")
 
     # plot spectrum
-    surf = ax.plot_surface(x, y, spectrum, cmap='viridis', antialiased=True)
+    surf = ax.plot_surface(x, y, spectrum, cmap="viridis", antialiased=True)
     # Plot the peaks on the surface
     for peak in peaks:
-        peak_dot = ax.scatter(x[peak[0], peak[1]], y[peak[0], peak[1]],
-                              spectrum[peak[0], peak[1]], c='r', marker='x')
-        ax.text(x[peak[0], peak[1]], y[peak[0], peak[1]],
-                spectrum[peak[0], peak[1]],
-                "({}, {})".format(x[peak[0], peak[1]], y[peak[0], peak[1]]))
+        peak_dot = ax.scatter(
+            x[peak[0], peak[1]],
+            y[peak[0], peak[1]],
+            spectrum[peak[0], peak[1]],
+            c="r",
+            marker="x",
+        )
+        ax.text(
+            x[peak[0], peak[1]],
+            y[peak[0], peak[1]],
+            spectrum[peak[0], peak[1]],
+            "({}, {})".format(x[peak[0], peak[1]], y[peak[0], peak[1]]),
+        )
     # plot ground truth
-    truth_lines = ax.stem(ground_truth[1], ground_truth[0],
-                          np.ones_like(ground_truth[0]),
-                          bottom=spectrum.min(), linefmt='g--', markerfmt=' ',
-                          basefmt=' ')
+    truth_lines = ax.stem(
+        ground_truth[1],
+        ground_truth[0],
+        np.ones_like(ground_truth[0]),
+        bottom=spectrum.min(),
+        linefmt="g--",
+        markerfmt=" ",
+        basefmt=" ",
+    )
 
-    ax.legend([surf, truth_lines, peak_dot],
-              ["Spectrum", "Estimated", "Ground Truth"])
+    ax.legend(
+        [surf, truth_lines, peak_dot], ["Spectrum", "Estimated", "Ground Truth"]
+    )
 
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
@@ -152,9 +182,14 @@ def plot_spatial_spectrum_2d(spectrum, ground_truth, azimuth_grids,
     plt.show()
 
 
-def plot_estimated_value_2d(estimated_azimuth, estimated_elevation,
-                            ground_truth, unit="deg",
-                            x_label="Angle", y_label="Spectrum"):
+def plot_estimated_value_2d(
+    estimated_azimuth,
+    estimated_elevation,
+    ground_truth,
+    unit="deg",
+    x_label="Angle",
+    y_label="Spectrum",
+):
     """Display estimated angle values
 
     Args:
@@ -182,10 +217,11 @@ def plot_estimated_value_2d(estimated_azimuth, estimated_elevation,
 
     for i in range(len(estimated_azimuth)):
         ax.annotate(
-            "({:.2f}, {:.2f})".format(estimated_azimuth[i] / np.pi * 180,
-                                      estimated_elevation[i]),
-            (estimated_azimuth[i], estimated_elevation[i])
-            )
+            "({:.2f}, {:.2f})".format(
+                estimated_azimuth[i] / np.pi * 180, estimated_elevation[i]
+            ),
+            (estimated_azimuth[i], estimated_elevation[i]),
+        )
 
     ax.set_xticks(np.arange(0, 2 * np.pi, step=np.pi / 6))
     ax.set_rlim([0, 90])

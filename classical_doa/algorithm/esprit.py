@@ -32,13 +32,14 @@ def esprit(received_data, num_signal, array, signal_fre, unit="deg"):
     # the rotational invariance
     sub_array_spacing = array.array_position[1][1] - array.array_position[0][1]
 
-    matrix_c = np.hstack((matrix_e_x, matrix_e_y)).transpose().conj() @\
-        np.hstack((matrix_e_x, matrix_e_y))
+    matrix_c = np.hstack(
+        (matrix_e_x, matrix_e_y)
+    ).transpose().conj() @ np.hstack((matrix_e_x, matrix_e_y))
 
     # get eigenvectors
     eigenvalues, eigenvectors = np.linalg.eig(matrix_c)
     sorted_index = np.argsort(np.abs(eigenvalues))[::-1]  # descending order
-    matrix_e = eigenvectors[:, sorted_index[:2 * num_signal]]
+    matrix_e = eigenvectors[:, sorted_index[: 2 * num_signal]]
 
     # take the upper right and lower right sub matrix
     matrix_e_12 = matrix_e[:num_signal, num_signal:]
@@ -49,13 +50,17 @@ def esprit(received_data, num_signal, array, signal_fre, unit="deg"):
 
     # Note: the signal model we use is different from model in reference paper,
     # so there should be "-2 pi f"
-    angles = np.arcsin(C * np.angle(matrix_phi) / ((-2 * np.pi * signal_fre) *
-                                                   sub_array_spacing))
+    angles = np.arcsin(
+        C
+        * np.angle(matrix_phi)
+        / ((-2 * np.pi * signal_fre) * sub_array_spacing)
+    )
 
     if unit == "deg":
         angles = angles / np.pi * 180
 
     return np.sort(angles)
+
 
 def uca_esprit(received_data, num_signal, array, signal_fre, unit="deg"):
     """UCA-ESPRIT for Uniform Circular Array.
@@ -78,22 +83,33 @@ def uca_esprit(received_data, num_signal, array, signal_fre, unit="deg"):
     m = int(np.floor(2 * np.pi * array.radius / (C / signal_fre)))
 
     matrix_c_v = np.diag(
-        1j ** np.concatenate((
-            np.arange(-m, 0),
-            np.arange(0, -m -1 , step=-1)
-            ))
+        1j ** np.concatenate((np.arange(-m, 0), np.arange(0, -m - 1, step=-1)))
+    )
+    matrix_v = (
+        1
+        / np.sqrt(array.num_antennas)
+        * np.exp(
+            -1j
+            * 2
+            * np.pi
+            * np.arange(0, array.num_antennas).reshape(-1, 1)
+            @ np.arange(-m, m + 1).reshape(1, -1)
+            / array.num_antennas
         )
-    matrix_v = 1 / np.sqrt(array.num_antennas) * np.exp(
-        -1j * 2 * np.pi *\
-        np.arange(0, array.num_antennas).reshape(-1, 1) @\
-        np.arange(-m, m+1).reshape(1, -1) / array.num_antennas
-        )
+    )
     matrix_f_e = matrix_v @ matrix_c_v.conj().transpose()
-    matrix_w = 1 / np.sqrt(2 * m + 1) * np.exp(
-        1j * 2 * np.pi *\
-        np.arange(-m, m+1).reshape(-1, 1) @\
-        np.arange(-m, m+1).reshape(1, -1) / (2 * m + 1)
+    matrix_w = (
+        1
+        / np.sqrt(2 * m + 1)
+        * np.exp(
+            1j
+            * 2
+            * np.pi
+            * np.arange(-m, m + 1).reshape(-1, 1)
+            @ np.arange(-m, m + 1).reshape(1, -1)
+            / (2 * m + 1)
         )
+    )
     matrix_f_r = matrix_f_e @ matrix_w
 
     # beamspace data vector
@@ -104,22 +120,23 @@ def uca_esprit(received_data, num_signal, array, signal_fre, unit="deg"):
     signal_space = get_signal_space(cov_real, num_signal)
 
     matrix_c_o = np.diag(
-        (-1) ** np.concatenate((
-            np.arange(m, -1, step=-1),
-            np.zeros(m)
-            ))
-        )
+        (-1) ** np.concatenate((np.arange(m, -1, step=-1), np.zeros(m)))
+    )
     signal_space = matrix_c_o @ matrix_w @ signal_space
 
     s1 = signal_space[:-2, :]
     s2 = signal_space[1:-1, :]
     s3 = signal_space[2:, :]
 
-    matrix_gamma = (1 / np.pi / array.radius) * np.diag(np.arange(-(m-1), m))
+    matrix_gamma = (1 / np.pi / array.radius) * np.diag(np.arange(-(m - 1), m))
     matrix_e = np.hstack((s1, s3))
-    matrix_psi_hat = np.linalg.inv(matrix_e.conj().transpose() @ matrix_e) @\
-        matrix_e.conj().transpose() @ matrix_gamma @ s2
-    matrix_psi = matrix_psi_hat[:len(matrix_psi_hat)//2, :]
+    matrix_psi_hat = (
+        np.linalg.inv(matrix_e.conj().transpose() @ matrix_e)
+        @ matrix_e.conj().transpose()
+        @ matrix_gamma
+        @ s2
+    )
+    matrix_psi = matrix_psi_hat[: len(matrix_psi_hat) // 2, :]
 
     eig_values = np.linalg.eigvals(matrix_psi)
 
@@ -131,4 +148,3 @@ def uca_esprit(received_data, num_signal, array, signal_fre, unit="deg"):
         azimuth = azimuth / np.pi * 180
 
     return azimuth, elevation
-

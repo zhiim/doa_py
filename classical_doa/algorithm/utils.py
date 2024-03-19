@@ -40,15 +40,18 @@ def divide_into_fre_bins(received_data, num_groups, fs):
     else:
         n_fft = n_each_group
 
-    signal_fre_bins = np.zeros((received_data.shape[0], n_fft, num_groups),
-                               dtype=np.complex128)
+    signal_fre_bins = np.zeros(
+        (received_data.shape[0], n_fft, num_groups), dtype=np.complex128
+    )
     # do FTT separately in each group
     for group_i in range(num_groups):
         signal_fre_bins[:, :, group_i] = np.fft.fft(
-            received_data[:, group_i * n_each_group:(group_i+1) * n_each_group],
+            received_data[
+                :, group_i * n_each_group : (group_i + 1) * n_each_group
+            ],
             n=n_fft,
-            axis=1
-            )
+            axis=1,
+        )
     fre_bins = np.fft.fftfreq(n_fft, 1 / fs)
 
     return signal_fre_bins, fre_bins

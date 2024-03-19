@@ -9,6 +9,7 @@ class Signal(ABC):
     Signals that inherit from this base class must implement the gen() method to
     generate simulated sampled signals.
     """
+
     def __init__(self, nsamples, fs, rng=None):
         self._nsamples = nsamples
         self._fs = fs
@@ -80,12 +81,17 @@ class ComplexStochasticSignal(Signal):
         super().gen(n, amp)
 
         # Generate complex envelope
-        envelope = self.amp @ (np.sqrt(1 / 2) *\
-                (self._rng.standard_normal(size=(self.n, self._nsamples)) +\
-                 1j * self._rng.standard_normal(size=(self.n, self._nsamples))))
+        envelope = self.amp @ (
+            np.sqrt(1 / 2)
+            * (
+                self._rng.standard_normal(size=(self.n, self._nsamples))
+                + 1j * self._rng.standard_normal(size=(self.n, self._nsamples))
+            )
+        )
 
-        signal = envelope * np.exp(-1j * 2 * np.pi * self._fre / self._fs *
-                                   np.arange(self._nsamples))
+        signal = envelope * np.exp(
+            -1j * 2 * np.pi * self._fre / self._fs * np.arange(self._nsamples)
+        )
 
         return signal
 
@@ -116,9 +122,15 @@ class ChirpSignal(Signal):
         # Generate signal one by one
         for i in range(self.n):
             sampling_time = np.arange(self._nsamples) * 1 / self._fs
-            signal[i, :] = np.exp(1j * 2 * np.pi * (self._f0[i] * sampling_time
-                                                    + 0.5 * self._k[i]
-                                                    * sampling_time ** 2))
+            signal[i, :] = np.exp(
+                1j
+                * 2
+                * np.pi
+                * (
+                    self._f0[i] * sampling_time
+                    + 0.5 * self._k[i] * sampling_time**2
+                )
+            )
 
         signal = self.amp @ signal
 

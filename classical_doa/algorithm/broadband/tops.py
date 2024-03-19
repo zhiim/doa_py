@@ -9,8 +9,16 @@ from classical_doa.algorithm.utils import (
 C = 3e8
 
 
-def tops(received_data, num_signal, array, fs, num_groups, angle_grids,
-         fre_ref, unit="deg"):
+def tops(
+    received_data,
+    num_signal,
+    array,
+    fs,
+    num_groups,
+    angle_grids,
+    fre_ref,
+    unit="deg",
+):
     """Test of orthogonality of projected subspaces (TOPS) method for wideband
     DOA estimation.
 
@@ -33,16 +41,16 @@ def tops(received_data, num_signal, array, fs, num_groups, angle_grids,
     """
     num_antennas = received_data.shape[0]
 
-    signal_fre_bins, fre_bins = divide_into_fre_bins(received_data, num_groups,
-                                                     fs)
+    signal_fre_bins, fre_bins = divide_into_fre_bins(
+        received_data, num_groups, fs
+    )
 
     # index of reference frequency in FFT output
     ref_index = int(fre_ref / (fs / fre_bins.size))
     # get signal space of reference frequency
     signal_space_ref = get_signal_space(
-        np.cov(signal_fre_bins[:, ref_index, :]),
-        num_signal=num_signal
-        )
+        np.cov(signal_fre_bins[:, ref_index, :]), num_signal=num_signal
+    )
 
     spectrum = np.zeros(angle_grids.size)
     for i, grid in enumerate(angle_grids):
@@ -50,8 +58,9 @@ def tops(received_data, num_signal, array, fs, num_groups, angle_grids,
 
         for j, fre in enumerate(fre_bins):
             # calculate noise subspace for the current frequency point
-            noise_space_f = get_noise_space(np.cov(signal_fre_bins[:, j, :]),
-                                            num_signal)
+            noise_space_f = get_noise_space(
+                np.cov(signal_fre_bins[:, j, :]), num_signal
+            )
 
             # construct transformation matrix
             matrix_phi = array.steering_vector(fre - fre_ref, grid, unit=unit)
@@ -63,16 +72,20 @@ def tops(received_data, num_signal, array, fs, num_groups, angle_grids,
 
             # construct projection matrix to reduce errors in matrix U
             matrix_a_f = array.steering_vector(fre, grid, unit=unit)
-            matrix_p = np.eye(num_antennas) -\
-                1 / (matrix_a_f.transpose().conj() @ matrix_a_f) *\
-                    matrix_a_f @ matrix_a_f.transpose().conj()
+            matrix_p = (
+                np.eye(num_antennas)
+                - 1
+                / (matrix_a_f.transpose().conj() @ matrix_a_f)
+                * matrix_a_f
+                @ matrix_a_f.transpose().conj()
+            )
 
             # project matrix U using the projection matrix
             matrix_u = matrix_p @ matrix_u
 
-            matrix_d = np.concatenate((matrix_d,
-                                       matrix_u.T.conj() @ noise_space_f),
-                                       axis=1)
+            matrix_d = np.concatenate(
+                (matrix_d, matrix_u.T.conj() @ noise_space_f), axis=1
+            )
 
         # construct spatial spectrum using the minimum eigenvalue of matrix D
         _, s, _ = np.linalg.svd(matrix_d)

@@ -6,13 +6,18 @@ C = 3e8  # wave speed
 
 
 class Array(ABC):
-    def __init__(self, element_position_x, element_position_y,
-                 element_position_z, rng=None):
+    def __init__(
+        self,
+        element_position_x,
+        element_position_y,
+        element_position_z,
+        rng=None,
+    ):
         """element position should be defined in 3D (x, y, z) coordinate
         system"""
-        self._element_position = np.vstack((element_position_x,
-                                            element_position_y,
-                                            element_position_z)).T
+        self._element_position = np.vstack(
+            (element_position_x, element_position_y, element_position_z)
+        ).T
 
         if rng is None:
             self._rng = np.random.default_rng()
@@ -58,24 +63,34 @@ class Array(ABC):
             return a steering maxtrix of dimension `Mxk`
         """
         if np.squeeze(angle_incidence).ndim == 1 or angle_incidence.size == 1:
-            angle_incidence = np.vstack((angle_incidence.reshape(1, -1),
-                                         np.zeros(angle_incidence.size)))
+            angle_incidence = np.vstack(
+                (angle_incidence.reshape(1, -1), np.zeros(angle_incidence.size))
+            )
 
-        angle_incidence = self._unify_unit(np.reshape(angle_incidence, (2, -1)),
-                                           unit)
+        angle_incidence = self._unify_unit(
+            np.reshape(angle_incidence, (2, -1)), unit
+        )
 
         cos_cos = np.cos(angle_incidence[0]) * np.cos(angle_incidence[1])
         sin_cos = np.sin(angle_incidence[0]) * np.cos(angle_incidence[1])
         sin_ = np.sin(angle_incidence[1])
 
-        time_delay = 1 / C * self.array_position @ np.vstack((cos_cos, sin_cos,
-                                                              sin_))
+        time_delay = (
+            1 / C * self.array_position @ np.vstack((cos_cos, sin_cos, sin_))
+        )
         steering_vector = np.exp(-1j * 2 * np.pi * fre * time_delay)
 
         return steering_vector
 
-    def received_signal(self, signal, snr, angle_incidence, amp=None,
-                        broadband=False, unit="deg"):
+    def received_signal(
+        self,
+        signal,
+        snr,
+        angle_incidence,
+        amp=None,
+        broadband=False,
+        unit="deg",
+    ):
         """Generate array received signal based on array signal model
 
         If `broadband` is set to True, generate array received signal based on
@@ -114,16 +129,25 @@ class Array(ABC):
         else:
             num_signal = angle_incidence.shape[1]
 
-        manifold_matrix = self.steering_vector(signal.frequency,
-                                               angle_incidence, unit="rad")
+        manifold_matrix = self.steering_vector(
+            signal.frequency, angle_incidence, unit="rad"
+        )
 
         incidence_signal = signal.gen(n=num_signal, amp=amp)
 
         received = manifold_matrix @ incidence_signal
 
-        noise = 1 / np.sqrt(10 ** (snr / 10)) * np.mean(np.abs(received)) *\
-            1 / np.sqrt(2) * (self._rng.standard_normal(size=received.shape) +
-                            1j * self._rng.standard_normal(size=received.shape))
+        noise = (
+            1
+            / np.sqrt(10 ** (snr / 10))
+            * np.mean(np.abs(received))
+            * 1
+            / np.sqrt(2)
+            * (
+                self._rng.standard_normal(size=received.shape)
+                + 1j * self._rng.standard_normal(size=received.shape)
+            )
+        )
         received = received + noise
 
         return received
@@ -146,21 +170,31 @@ class Array(ABC):
         # generate array signal in frequency domain
         signal_fre_domain = np.fft.fft(incidence_signal, axis=1)
 
-        received_fre_domain = np.zeros((num_antennas, num_snapshots),
-                                       dtype=np.complex128)
+        received_fre_domain = np.zeros(
+            (num_antennas, num_snapshots), dtype=np.complex128
+        )
         fre_points = np.fft.fftfreq(num_snapshots, 1 / signal.fs)
         for i, fre in enumerate(fre_points):
-            manifold_fre = self.steering_vector(fre, angle_incidence,
-                                                unit="rad")
+            manifold_fre = self.steering_vector(
+                fre, angle_incidence, unit="rad"
+            )
 
             # calculate array received signal at every frequency point
             received_fre_domain[:, i] = manifold_fre @ signal_fre_domain[:, i]
 
         received = np.fft.ifft(received_fre_domain, axis=1)
 
-        noise = 1 / np.sqrt(10 ** (snr / 10)) * np.mean(np.abs(received)) *\
-            1 / np.sqrt(2) * (self._rng.standard_normal(size=received.shape) +
-                            1j * self._rng.standard_normal(size=received.shape))
+        noise = (
+            1
+            / np.sqrt(10 ** (snr / 10))
+            * np.mean(np.abs(received))
+            * 1
+            / np.sqrt(2)
+            * (
+                self._rng.standard_normal(size=received.shape)
+                + 1j * self._rng.standard_normal(size=received.shape)
+            )
+        )
         received = received + noise
 
         return received
@@ -182,8 +216,9 @@ class UniformLinearArray(Array):
         element_position_y = np.arange(m) * dd
         element_position_z = np.zeros(m)
 
-        super().__init__(element_position_x, element_position_y,
-                         element_position_z, rng)
+        super().__init__(
+            element_position_x, element_position_y, element_position_z, rng
+        )
 
 
 class UniformCircularArray(Array):
@@ -204,8 +239,9 @@ class UniformCircularArray(Array):
         element_position_y = r * np.sin(2 * np.pi * np.arange(m) / m)
         element_position_z = np.zeros(m)
 
-        super().__init__(element_position_x, element_position_y,
-                         element_position_z, rng)
+        super().__init__(
+            element_position_x, element_position_y, element_position_z, rng
+        )
 
     @property
     def radius(self):

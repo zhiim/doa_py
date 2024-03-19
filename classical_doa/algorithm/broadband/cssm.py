@@ -5,8 +5,16 @@ from classical_doa.algorithm.music import music
 C = 3e8
 
 
-def cssm(received_data, num_signal, array, fs, angle_grids, fre_ref,
-         pre_estimate, unit="deg"):
+def cssm(
+    received_data,
+    num_signal,
+    array,
+    fs,
+    angle_grids,
+    fre_ref,
+    pre_estimate,
+    unit="deg",
+):
     """Coherent Signal Subspace Method (CSSM) for wideband DOA estimation.
 
     Args:
@@ -52,8 +60,13 @@ def cssm(received_data, num_signal, array, fs, angle_grids, fre_ref,
         # frequency point
         signal_fre_bins[:, i] = matrix_t_f @ signal_fre_bins[:, i]
 
-    spectrum = music(received_data=signal_fre_bins, num_signal=num_signal,
-                     array=array, signal_fre=fre_ref,
-                     angle_grids=angle_grids, unit=unit)
+    spectrum = music(
+        received_data=signal_fre_bins,
+        num_signal=num_signal,
+        array=array,
+        signal_fre=fre_ref,
+        angle_grids=angle_grids,
+        unit=unit,
+    )
 
     return np.squeeze(spectrum)

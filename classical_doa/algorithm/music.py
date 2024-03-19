@@ -5,8 +5,9 @@ from classical_doa.algorithm.utils import get_noise_space
 C = 3e8
 
 
-def music(received_data, num_signal, array, signal_fre, angle_grids,
-          unit="deg"):
+def music(
+    received_data, num_signal, array, signal_fre, angle_grids, unit="deg"
+):
     """1D MUSIC
 
     Args:
@@ -23,8 +24,9 @@ def music(received_data, num_signal, array, signal_fre, angle_grids,
 
     # Calculate the manifold matrix when there are incident signal in all
     # grid points
-    manifold_all_grids = array.steering_vector(signal_fre, angle_grids,
-                                               unit=unit)
+    manifold_all_grids = array.steering_vector(
+        signal_fre, angle_grids, unit=unit
+    )
 
     v = noise_space.transpose().conj() @ manifold_all_grids
 
@@ -35,8 +37,7 @@ def music(received_data, num_signal, array, signal_fre, angle_grids,
     return np.squeeze(spectrum)
 
 
-def root_music(received_data, num_signal, array, signal_fre,
-               unit="deg"):
+def root_music(received_data, num_signal, array, signal_fre, unit="deg"):
     """Root-MUSIC
 
     Args:
@@ -80,8 +81,11 @@ def root_music(received_data, num_signal, array, signal_fre,
     sorted_index = np.argsort(np.abs(np.abs(roots_inside_unit_circle) - 1))
     chosen_roots = roots_inside_unit_circle[sorted_index[:num_signal]]
 
-    angles = np.arcsin((C / signal_fre) / (-2 * np.pi * antenna_spacing) *
-                       np.angle(chosen_roots))
+    angles = np.arcsin(
+        (C / signal_fre)
+        / (-2 * np.pi * antenna_spacing)
+        * np.angle(chosen_roots)
+    )
 
     if unit == "deg":
         angles = angles / np.pi * 180
@@ -89,8 +93,15 @@ def root_music(received_data, num_signal, array, signal_fre,
     return np.sort(angles)
 
 
-def uca_rb_music(received_data, num_signal, array, signal_fre, azimuth_grids,
-                 elevation_grids, unit="deg"):
+def uca_rb_music(
+    received_data,
+    num_signal,
+    array,
+    signal_fre,
+    azimuth_grids,
+    elevation_grids,
+    unit="deg",
+):
     """form MUSIC for Uniform Circular Array (UCA)
 
     Args:
@@ -111,22 +122,33 @@ def uca_rb_music(received_data, num_signal, array, signal_fre, azimuth_grids,
     m = np.floor(2 * np.pi * array.radius / (C / signal_fre))
 
     matrix_c_v = np.diag(
-        1j ** np.concatenate((
-            np.arange(-m, 0),
-            np.arange(0, -m -1 , step=-1)
-            ))
+        1j ** np.concatenate((np.arange(-m, 0), np.arange(0, -m - 1, step=-1)))
+    )
+    matrix_v = (
+        1
+        / np.sqrt(array.num_antennas)
+        * np.exp(
+            -1j
+            * 2
+            * np.pi
+            * np.arange(0, array.num_antennas).reshape(-1, 1)
+            @ np.arange(-m, m + 1).reshape(1, -1)
+            / array.num_antennas
         )
-    matrix_v = 1 / np.sqrt(array.num_antennas) * np.exp(
-        -1j * 2 * np.pi *\
-        np.arange(0, array.num_antennas).reshape(-1, 1) @\
-        np.arange(-m, m+1).reshape(1, -1) / array.num_antennas
-        )
+    )
     matrix_f_e = matrix_v @ matrix_c_v.conj().transpose()
-    matrix_w = 1 / np.sqrt(2 * m + 1) * np.exp(
-        1j * 2 * np.pi *\
-        np.arange(-m, m+1).reshape(-1, 1) @\
-        np.arange(-m, m+1).reshape(1, -1) / (2 * m + 1)
+    matrix_w = (
+        1
+        / np.sqrt(2 * m + 1)
+        * np.exp(
+            1j
+            * 2
+            * np.pi
+            * np.arange(-m, m + 1).reshape(-1, 1)
+            @ np.arange(-m, m + 1).reshape(1, -1)
+            / (2 * m + 1)
         )
+    )
     matrix_f_r = matrix_f_e @ matrix_w
 
     # beamspace data vector
@@ -140,11 +162,12 @@ def uca_rb_music(received_data, num_signal, array, signal_fre, azimuth_grids,
     for i, elevation in enumerate(elevation_grids):
         angle_grids = np.vstack(
             (azimuth_grids, elevation * np.ones_like(azimuth_grids))
-            )
+        )
         # Calculate the manifold matrix when there are incident signal in all
         # grid points
-        manifold_all_grids = array.steering_vector(signal_fre, angle_grids,
-                                                unit=unit)
+        manifold_all_grids = array.steering_vector(
+            signal_fre, angle_grids, unit=unit
+        )
         manifold_all_grids = matrix_f_r.conj().transpose() @ manifold_all_grids
 
         v = noise_space.transpose().conj() @ manifold_all_grids
