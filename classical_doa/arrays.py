@@ -85,8 +85,8 @@ class Array(ABC):
     def received_signal(
         self,
         signal,
-        snr,
         angle_incidence,
+        snr=None,
         amp=None,
         broadband=False,
         unit="deg",
@@ -98,12 +98,12 @@ class Array(ABC):
 
         Args:
             signal: An instance of the `Signal` class
-            snr: Signal-to-noise ratio
             angle_incidence: Incidence angle. If only azimuth is considered,
                 `angle_incidence` is a 1xN dimensional matrix; if two dimensions
                 are considered, `angle_incidence` is a 2xN dimensional matrix,
                 where the first row is the azimuth and the second row is the
                 elevation angle.
+            snr: Signal-to-noise ratio. If set to None, no noise will be added
             amp: The amplitude of each signal, 1d numpy array
             broadband: Whether to generate broadband received signals
             unit: The unit of the angle, `rad` represents radian,
@@ -137,18 +137,19 @@ class Array(ABC):
 
         received = manifold_matrix @ incidence_signal
 
-        noise = (
-            1
-            / np.sqrt(10 ** (snr / 10))
-            * np.mean(np.abs(received))
-            * 1
-            / np.sqrt(2)
-            * (
-                self._rng.standard_normal(size=received.shape)
-                + 1j * self._rng.standard_normal(size=received.shape)
+        if snr is not None:
+            noise = (
+                1
+                / np.sqrt(10 ** (snr / 10))
+                * np.mean(np.abs(received))
+                * 1
+                / np.sqrt(2)
+                * (
+                    self._rng.standard_normal(size=received.shape)
+                    + 1j * self._rng.standard_normal(size=received.shape)
+                )
             )
-        )
-        received = received + noise
+            received = received + noise
 
         return received
 
@@ -184,18 +185,19 @@ class Array(ABC):
 
         received = np.fft.ifft(received_fre_domain, axis=1)
 
-        noise = (
-            1
-            / np.sqrt(10 ** (snr / 10))
-            * np.mean(np.abs(received))
-            * 1
-            / np.sqrt(2)
-            * (
-                self._rng.standard_normal(size=received.shape)
-                + 1j * self._rng.standard_normal(size=received.shape)
+        if snr is not None:
+            noise = (
+                1
+                / np.sqrt(10 ** (snr / 10))
+                * np.mean(np.abs(received))
+                * 1
+                / np.sqrt(2)
+                * (
+                    self._rng.standard_normal(size=received.shape)
+                    + 1j * self._rng.standard_normal(size=received.shape)
+                )
             )
-        )
-        received = received + noise
+            received = received + noise
 
         return received
 
