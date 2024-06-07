@@ -21,6 +21,8 @@ class Array(ABC):
 
         if rng is None:
             self._rng = np.random.default_rng()
+        else:
+            self._rng = rng
 
     @property
     def num_antennas(self):

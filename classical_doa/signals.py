@@ -16,6 +16,8 @@ class Signal(ABC):
 
         if rng is None:
             self._rng = np.random.default_rng()
+        else:
+            self._rng = rng
 
     @property
     def fs(self):
