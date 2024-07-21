@@ -78,6 +78,7 @@ Check `examples` for more examples.
    complex stochastic signal
 - Broadband  
    chirp signal
+  broadband signal consisting of multiple narrowband signals
 
 ### Algorithms
 

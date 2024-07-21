@@ -137,3 +137,55 @@ class ChirpSignal(Signal):
         signal = self.amp @ signal
 
         return signal
+
+
+class ModBroadSignal(Signal):
+    def __init__(self, nsamples, fre_min, fre_max, fs, rng=None):
+        """Broadband signal consisting of mulitple narrowband signals modulated
+        on different carrier frequencies. Each signal on different carrier
+        frequency has a different DOA.
+
+        Args:
+            nsamples (int): Number of sampling points
+            fs (float): Sampling frequency
+            rng (np.random.Generator): Random generator used to generate random
+                numbers
+        """
+        super().__init__(nsamples, fs, rng)
+
+        self._fre_min = fre_min
+        self._fre_max = fre_max
+
+    def gen(self, n, amp=None):
+        """Generate sampled signals
+
+        Args:
+            n (int): Number of signals
+            amp (np.array): Amplitude of the signals (1D array of size n), used
+                to define different amplitudes for different signals.
+                By default it will generate equal amplitude signal.
+        """
+        super().gen(n, amp)
+
+        # generate random carrier frequencies
+        fres = self._rng.uniform(self._fre_min, self._fre_max, size=n)
+
+        # Generate complex envelope
+        envelope = self.amp @ (
+            np.sqrt(1 / 2)
+            * (
+                self._rng.standard_normal(size=(self.n, self._nsamples))
+                + 1j * self._rng.standard_normal(size=(self.n, self._nsamples))
+            )
+        )
+
+        signal = envelope * np.exp(
+            -1j
+            * 2
+            * np.pi
+            * fres.reshape(-1, 1)
+            / self._fs
+            * np.arange(self._nsamples)
+        )
+
+        return signal
