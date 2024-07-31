@@ -1,6 +1,6 @@
 import numpy as np
 
-from classical_doa.algorithm.music import music
+from classical_doa.algorithm.music_based import music
 from classical_doa.algorithm.utils import (
     divide_into_fre_bins,
     get_noise_space,

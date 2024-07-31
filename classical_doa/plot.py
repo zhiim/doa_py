@@ -6,9 +6,9 @@ from skimage.feature import peak_local_max
 
 def plot_spatial_spectrum(
     spectrum,
-    ground_truth,
     angle_grids,
     num_signal,
+    ground_truth=None,
     x_label="Angle",
     y_label="Spectrum",
 ):
@@ -16,9 +16,9 @@ def plot_spatial_spectrum(
 
     Args:
         spectrum: Spatial spectrum estimated by the algorithm
-        ground_truth: True incident angles
         angle_grids: Angle grids corresponding to the spatial spectrum
         num_signal: Number of signals
+        ground_truth: True incident angles
         x_label: x-axis label
         y_label: y-axis label
     """
@@ -54,11 +54,15 @@ def plot_spatial_spectrum(
         ax.annotate(angle, xy=(angle, heights[i]))
 
     # ground truth
-    for angle in ground_truth:
-        ax.axvline(x=angle, color="green", linestyle="--")
+    if ground_truth is not None:
+        for angle in ground_truth:
+            ax.axvline(x=angle, color="green", linestyle="--")
 
     # set labels
-    ax.legend(["Spectrum", "Estimated", "Ground Truth"])
+    if ground_truth is not None:
+        ax.legend(["Spectrum", "Estimated", "Ground Truth"])
+    else:
+        ax.legend(["Spectrum", "Estimated"])
 
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
@@ -68,9 +72,9 @@ def plot_spatial_spectrum(
 
 def plot_estimated_value(
     estimates,
-    ground_truth,
     ticks_min=-90,
     ticks_max=90,
+    ground_truth=None,
     x_label="Angle",
     y_label="Spectrum",
 ):
@@ -78,11 +82,11 @@ def plot_estimated_value(
 
     Args:
         estimates: Angle estimates
-        ground_truth: True incident angles
         ticks_min (int, optional): Minimum value for x-axis ticks.
             Defaults to -90.
         ticks_max (int, optional): Maximum value for x-axis ticks.
             Defaults to 90.
+        ground_truth: True incident angles
         x_label (str, optional): x-axis label. Defaults to "Angle".
         y_label (str, optional): y-axis label. Defaults to "Spetrum".
     """
@@ -97,8 +101,9 @@ def plot_estimated_value(
     ax.xaxis.set_minor_locator(plt.MultipleLocator(minor_space))
 
     # ground truth
-    for angle in ground_truth:
-        truth_line = ax.axvline(x=angle, color="c", linestyle="--")
+    if ground_truth is not None:
+        for angle in ground_truth:
+            truth_line = ax.axvline(x=angle, color="c", linestyle="--")
 
     # plot estimates
     for angle in estimates:
@@ -109,16 +114,20 @@ def plot_estimated_value(
     ax.set_ylabel(y_label)
 
     # set legend
-    ax.legend([truth_line, estimate_line], ["Ground Truth", "Estimated"])
+    if ground_truth is not None:
+        ax.legend([truth_line, estimate_line], ["Ground Truth", "Estimated"])
+    else:
+        ax.legend([estimate_line], ["Estimated"])
 
     plt.show()
 
 
 def plot_spatial_spectrum_2d(
     spectrum,
-    ground_truth,
     azimuth_grids,
     elevation_grids,
+    num_signal,
+    ground_truth=None,
     x_label="Elevation",
     y_label="Azimuth",
     z_label="Spectrum",
@@ -127,9 +136,10 @@ def plot_spatial_spectrum_2d(
 
     Args:
         spectrum: Spatial spectrum estimated by the algorithm
-        ground_truth: True incident angles
         azimuth_grids : Azimuth grids corresponding to the spatial spectrum
         elevation_grids : Elevation grids corresponding to the spatial spectrum
+        num_signal: Number of signals
+        ground_truth: True incident angles
         x_label: x-axis label
         y_label: y-axis label
         z_label : x-axis label. Defaults to "Spectrum".
@@ -137,7 +147,7 @@ def plot_spatial_spectrum_2d(
     x, y = np.meshgrid(elevation_grids, azimuth_grids)
     spectrum = spectrum / spectrum.max()
     # Find the peaks in the surface
-    peaks = peak_local_max(spectrum, num_peaks=ground_truth.shape[1])
+    peaks = peak_local_max(spectrum, num_peaks=num_signal)
     spectrum = np.log(spectrum + 1e-10)
 
     fig = plt.figure()
@@ -161,19 +171,24 @@ def plot_spatial_spectrum_2d(
             "({}, {})".format(x[peak[0], peak[1]], y[peak[0], peak[1]]),
         )
     # plot ground truth
-    truth_lines = ax.stem(
-        ground_truth[1],
-        ground_truth[0],
-        np.ones_like(ground_truth[0]),
-        bottom=spectrum.min(),
-        linefmt="g--",
-        markerfmt=" ",
-        basefmt=" ",
-    )
+    if ground_truth is not None:
+        truth_lines = ax.stem(
+            ground_truth[1],
+            ground_truth[0],
+            np.ones_like(ground_truth[0]),
+            bottom=spectrum.min(),
+            linefmt="g--",
+            markerfmt=" ",
+            basefmt=" ",
+        )
 
-    ax.legend(
-        [surf, truth_lines, peak_dot], ["Spectrum", "Estimated", "Ground Truth"]
-    )
+    if ground_truth is not None:
+        ax.legend(
+            [surf, truth_lines, peak_dot],
+            ["Spectrum", "Estimated", "Ground Truth"],
+        )
+    else:
+        ax.legend([surf, peak_dot], ["Spectrum", "Estimated"])
 
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
@@ -185,7 +200,8 @@ def plot_spatial_spectrum_2d(
 def plot_estimated_value_2d(
     estimated_azimuth,
     estimated_elevation,
-    ground_truth,
+    num_signal,
+    ground_truth=None,
     unit="deg",
     x_label="Angle",
     y_label="Spectrum",
@@ -194,6 +210,7 @@ def plot_estimated_value_2d(
 
     Args:
         estimates: Angle estimates
+        num_signal: Number of signals
         ground_truth: True incident angles
         ticks_min (int, optional): Minimum value for x-axis ticks.
             Defaults to -90.
@@ -204,13 +221,14 @@ def plot_estimated_value_2d(
     """
     if unit == "deg":
         estimated_azimuth = estimated_azimuth / 180 * np.pi
-        ground_truth = ground_truth.astype(float)
-        ground_truth[0] = ground_truth[0] / 180 * np.pi
 
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1, projection="polar")
 
-    ax.scatter(ground_truth[0], ground_truth[1], marker="o", color="g")
+    if ground_truth is not None:
+        ground_truth = ground_truth.astype(float)
+        ground_truth[0] = ground_truth[0] / 180 * np.pi
+        ax.scatter(ground_truth[0], ground_truth[1], marker="o", color="g")
     ax.scatter(estimated_azimuth, estimated_elevation, marker="x", color="r")
 
     ax.set_rlabel_position(90)
