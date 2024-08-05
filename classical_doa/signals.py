@@ -10,8 +10,7 @@ class Signal(ABC):
     generate simulated sampled signals.
     """
 
-    def __init__(self, nsamples, fs, rng=None):
-        self._nsamples = nsamples
+    def __init__(self, fs, rng=None):
         self._fs = fs
 
         if rng is None:
@@ -23,10 +22,6 @@ class Signal(ABC):
     def fs(self):
         return self._fs
 
-    @property
-    def nsamples(self):
-        return self._nsamples
-
     def set_rng(self, rng):
         """Setting random number generator
 
@@ -36,12 +31,22 @@ class Signal(ABC):
         """
         self._rng = rng
 
+    def _get_amp(self, amp, n):
+        # Default to generate signals with equal amplitudes
+        if amp is None:
+            amp = np.diag(np.ones(n))
+        else:
+            amp = np.diag(np.squeeze(amp))
+
+        return amp
+
     @abstractmethod
-    def gen(self, n, amp=None):
+    def gen(self, n, nsamples, amp=None):
         """Generate sampled signals
 
         Args:
             n (int): Number of signals
+            nsamples (int): Number of snapshots
             amp (np.array): Amplitude of the signals (1D array of size n), used
                 to define different amplitudes for different signals.
                 By default it will generate equal amplitude signal.
@@ -49,17 +54,11 @@ class Signal(ABC):
         Returns:
             signal (np.array): Sampled signals
         """
-        self.n = n
-
-        # Default to generate signals with equal amplitudes
-        if amp is None:
-            self.amp = np.diag(np.ones(n))
-        else:
-            self.amp = np.diag(np.squeeze(amp))
+        raise NotImplementedError
 
 
 class ComplexStochasticSignal(Signal):
-    def __init__(self, nsamples, fre, fs, rng=None):
+    def __init__(self, fre, fs, rng=None):
         """Complex stochastic signal (complex exponential form of random phase
         signal)
 
@@ -70,7 +69,7 @@ class ComplexStochasticSignal(Signal):
             rng (np.random.Generator): Random generator used to generate random
                 numbers
         """
-        super().__init__(nsamples, fs, rng)
+        super().__init__(fs, rng)
 
         self._fre = fre
 
@@ -79,27 +78,27 @@ class ComplexStochasticSignal(Signal):
         """Frequency of the signal (narrowband)"""
         return self._fre
 
-    def gen(self, n, amp=None):
-        super().gen(n, amp)
+    def gen(self, n, nsamples, amp=None):
+        amp = self._get_amp(amp, n)
 
         # Generate complex envelope
-        envelope = self.amp @ (
+        envelope = amp @ (
             np.sqrt(1 / 2)
             * (
-                self._rng.standard_normal(size=(self.n, self._nsamples))
-                + 1j * self._rng.standard_normal(size=(self.n, self._nsamples))
+                self._rng.standard_normal(size=(n, nsamples))
+                + 1j * self._rng.standard_normal(size=(n, nsamples))
             )
         )
 
         signal = envelope * np.exp(
-            -1j * 2 * np.pi * self._fre / self._fs * np.arange(self._nsamples)
+            -1j * 2 * np.pi * self._fre / self._fs * np.arange(nsamples)
         )
 
         return signal
 
 
 class ChirpSignal(Signal):
-    def __init__(self, nsamples, fs, f0, f1, t1=None, rng=None):
+    def __init__(self, fs, f0, f1, t1, rng=None):
         """Chirp signal
 
         Args:
@@ -109,21 +108,19 @@ class ChirpSignal(Signal):
             t1 (np.array): Time at which f1 is specified. An 1D array of size n
             fs (int | float): Sampling frequency
         """
-        super().__init__(nsamples, fs, rng)
+        super().__init__(fs, rng)
 
         self._f0 = f0
-        if t1 is None:
-            t1 = np.full(f0.shape, nsamples / fs)
         self._k = (f1 - f0) / t1  # Rate of frequency change
 
-    def gen(self, n, amp=None):
-        super().gen(n, amp)
+    def gen(self, n, nsamples, amp=None):
+        amp = self._get_amp(amp, n)
 
-        signal = np.zeros((self.n, self._nsamples), dtype=np.complex128)
+        signal = np.zeros((n, nsamples), dtype=np.complex128)
 
         # Generate signal one by one
-        for i in range(self.n):
-            sampling_time = np.arange(self._nsamples) * 1 / self._fs
+        for i in range(n):
+            sampling_time = np.arange(nsamples) * 1 / self._fs
             signal[i, :] = np.exp(
                 1j
                 * 2
@@ -134,48 +131,39 @@ class ChirpSignal(Signal):
                 )
             )
 
-        signal = self.amp @ signal
+        signal = amp @ signal
 
         return signal
 
 
-class ModBroadSignal(Signal):
-    def __init__(self, nsamples, fre_min, fre_max, fs, rng=None):
+class MultiCarrierSignal(Signal):
+    def __init__(self, fre_min, fre_max, fs, rng=None):
         """Broadband signal consisting of mulitple narrowband signals modulated
         on different carrier frequencies. Each signal on different carrier
         frequency has a different DOA.
 
         Args:
-            nsamples (int): Number of sampling points
             fs (float): Sampling frequency
             rng (np.random.Generator): Random generator used to generate random
                 numbers
         """
-        super().__init__(nsamples, fs, rng)
+        super().__init__(fs, rng)
 
         self._fre_min = fre_min
         self._fre_max = fre_max
 
-    def gen(self, n, amp=None):
-        """Generate sampled signals
-
-        Args:
-            n (int): Number of signals
-            amp (np.array): Amplitude of the signals (1D array of size n), used
-                to define different amplitudes for different signals.
-                By default it will generate equal amplitude signal.
-        """
-        super().gen(n, amp)
+    def gen(self, n, nsamples, amp=None):
+        amp = self._get_amp(amp, n)
 
         # generate random carrier frequencies
         fres = self._rng.uniform(self._fre_min, self._fre_max, size=n)
 
         # Generate complex envelope
-        envelope = self.amp @ (
+        envelope = amp @ (
             np.sqrt(1 / 2)
             * (
-                self._rng.standard_normal(size=(self.n, self._nsamples))
-                + 1j * self._rng.standard_normal(size=(self.n, self._nsamples))
+                self._rng.standard_normal(size=(n, nsamples))
+                + 1j * self._rng.standard_normal(size=(n, nsamples))
             )
         )
 
@@ -185,7 +173,7 @@ class ModBroadSignal(Signal):
             * np.pi
             * fres.reshape(-1, 1)
             / self._fs
-            * np.arange(self._nsamples)
+            * np.arange(nsamples)
         )
 
         return signal

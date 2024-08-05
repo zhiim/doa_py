@@ -89,6 +89,7 @@ class Array(ABC):
         signal,
         angle_incidence,
         snr=None,
+        nsamples=100,
         amp=None,
         broadband=False,
         unit="deg",
@@ -106,6 +107,7 @@ class Array(ABC):
                 where the first row is the azimuth and the second row is the
                 elevation angle.
             snr: Signal-to-noise ratio. If set to None, no noise will be added
+            nsamples (int): Number of snapshots, defaults to 100
             amp: The amplitude of each signal, 1d numpy array
             broadband: Whether to generate broadband received signals
             unit: The unit of the angle, `rad` represents radian,
@@ -115,13 +117,17 @@ class Array(ABC):
         angle_incidence = self._unify_unit(angle_incidence, unit)
 
         if broadband is False:
-            received = self._gen_narrowband(signal, snr, angle_incidence, amp)
+            received = self._gen_narrowband(
+                signal, snr, nsamples, angle_incidence, amp
+            )
         else:
-            received = self._gen_broadband(signal, snr, angle_incidence, amp)
+            received = self._gen_broadband(
+                signal, snr, nsamples, angle_incidence, amp
+            )
 
         return received
 
-    def _gen_narrowband(self, signal, snr, angle_incidence, amp):
+    def _gen_narrowband(self, signal, snr, nsamples, angle_incidence, amp):
         """Generate narrowband received signal
 
         `azimuth` and `elevation` are already in radians
@@ -135,7 +141,7 @@ class Array(ABC):
             signal.frequency, angle_incidence, unit="rad"
         )
 
-        incidence_signal = signal.gen(n=num_signal, amp=amp)
+        incidence_signal = signal.gen(n=num_signal, nsamples=nsamples, amp=amp)
 
         received = manifold_matrix @ incidence_signal
 
@@ -155,7 +161,7 @@ class Array(ABC):
 
         return received
 
-    def _gen_broadband(self, signal, snr, angle_incidence, amp):
+    def _gen_broadband(self, signal, snr, nsamples, angle_incidence, amp):
         """Generate broadband received signal
 
         `azimuth` and `elevation` are already in radians
@@ -165,18 +171,17 @@ class Array(ABC):
         else:
             num_signal = angle_incidence.shape[1]
 
-        num_snapshots = signal.nsamples
         num_antennas = self._element_position.shape[0]
 
-        incidence_signal = signal.gen(n=num_signal, amp=amp)
+        incidence_signal = signal.gen(n=num_signal, nsamples=nsamples, amp=amp)
 
         # generate array signal in frequency domain
         signal_fre_domain = np.fft.fft(incidence_signal, axis=1)
 
         received_fre_domain = np.zeros(
-            (num_antennas, num_snapshots), dtype=np.complex128
+            (num_antennas, nsamples), dtype=np.complex128
         )
-        fre_points = np.fft.fftfreq(num_snapshots, 1 / signal.fs)
+        fre_points = np.fft.fftfreq(nsamples, 1 / signal.fs)
         for i, fre in enumerate(fre_points):
             manifold_fre = self.steering_vector(
                 fre, angle_incidence, unit="rad"
