@@ -32,11 +32,11 @@ from classical_doa.plot import plot_spatial_spectrum
 # Create a 8-element ULA with 0.5m spacing
 ula = arrays.UniformLinearArray(m=8, dd=0.5)
 # Create a complex stochastic signal
-source = signals.ComplexStochasticSignal(nsamples=1000, fre=3e8, fs=1e9)
+source = signals.ComplexStochasticSignal(fre=3e8, fs=1e9)
 
 # Simulate the received data
 received_data = ula.received_signal(
-    signal=source, snr=0, angle_incidence=np.array([0, 30]), unit="deg"
+    signal=source, snr=0, nsamples=1000, angle_incidence=np.array([0, 30]), unit="deg"
 )
 
 # Calculate the MUSIC spectrum
