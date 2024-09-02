@@ -10,17 +10,11 @@ class Signal(ABC):
     generate simulated sampled signals.
     """
 
-    def __init__(self, fs, rng=None):
-        self._fs = fs
-
+    def __init__(self, rng=None):
         if rng is None:
             self._rng = np.random.default_rng()
         else:
             self._rng = rng
-
-    @property
-    def fs(self):
-        return self._fs
 
     def set_rng(self, rng):
         """Setting random number generator
@@ -57,123 +51,162 @@ class Signal(ABC):
         raise NotImplementedError
 
 
-class ComplexStochasticSignal(Signal):
-    def __init__(self, fre, fs, rng=None):
+class NarrowSignal(Signal):
+    def __init__(self, fc, rng=None):
+        self._fc = fc
+
+        super().__init__(rng=rng)
+
+    @property
+    def frequency(self):
+        """Frequency of narrowband signal"""
+        return self._fc
+
+    @abstractmethod
+    def gen(self, n, nsamples, amp=None):
+        raise NotImplementedError
+
+
+class ComplexStochasticSignal(NarrowSignal):
+    def __init__(self, fc, rng=None):
         """Complex stochastic signal (complex exponential form of random phase
         signal)
 
         Args:
             nsamples (int): Number of sampling points
             fre (float): Signal frequency
-            fs (float): Sampling frequency
             rng (np.random.Generator): Random generator used to generate random
                 numbers
         """
-        super().__init__(fs, rng)
-
-        self._fre = fre
-
-    @property
-    def frequency(self):
-        """Frequency of the signal (narrowband)"""
-        return self._fre
+        super().__init__(fc, rng)
 
     def gen(self, n, nsamples, amp=None):
         amp = self._get_amp(amp, n)
 
         # Generate complex envelope
-        envelope = amp @ (
+        signal = amp @ (
             np.sqrt(1 / 2)
             * (
                 self._rng.standard_normal(size=(n, nsamples))
                 + 1j * self._rng.standard_normal(size=(n, nsamples))
             )
         )
-
-        signal = envelope * np.exp(
-            -1j * 2 * np.pi * self._fre / self._fs * np.arange(nsamples)
-        )
-
         return signal
 
 
-class ChirpSignal(Signal):
-    def __init__(self, fs, f0, f1, t1, rng=None):
+class BoardSignal(Signal):
+    def __init__(self, f_min, f_max, fs, rng=None):
+        self._f_min = f_min
+        self._f_max = f_max
+        self._fs = fs
+
+        super().__init__(rng=rng)
+
+    @property
+    def fs(self):
+        return self._fs
+
+    @abstractmethod
+    def gen(self, n, nsamples, amp=None):
+        raise NotImplementedError
+
+    def _gen_fre_ranges(self, n, min_length_ratio=0.3):
+        """Generate frequency ranges for each boardband signal
+
+        Args:
+            n (int): Number of signals
+            min_length_ratio (float): Minimum length ratio of the frequency
+                range in (f_max - f_min)
+
+        Returns:
+            ranges (np.array): Frequency ranges for each signal with shape
+                (n, 2)
+        """
+        min_length = (self._f_max - self._f_min) * min_length_ratio
+        ranges = np.zeros((n, 2))
+        for i in range(n):
+            length = self._rng.uniform(min_length, self._f_max - self._f_min)
+            start = self._rng.uniform(self._f_min, self._f_max - length)
+            ranges[i] = [start, start + length]
+        return ranges
+
+
+class ChirpSignal(BoardSignal):
+    def __init__(self, f_min, f_max, fs, rng=None):
         """Chirp signal
 
         Args:
-            nsamples (int): Number of sampling points
-            f0 (np.array): Start frequency at time 0. An 1D array of size n
-            f1 (np.array): Frequency at time t1. An 1D array of size n
-            t1 (np.array): Time at which f1 is specified. An 1D array of size n
+            f_min (float): Minimum frequency
+            f_max (float): Maximum frequency
             fs (int | float): Sampling frequency
-        """
-        super().__init__(fs, rng)
-
-        self._f0 = f0
-        self._k = (f1 - f0) / t1  # Rate of frequency change
-
-    def gen(self, n, nsamples, amp=None):
-        amp = self._get_amp(amp, n)
-
-        signal = np.zeros((n, nsamples), dtype=np.complex128)
-
-        # Generate signal one by one
-        for i in range(n):
-            sampling_time = np.arange(nsamples) * 1 / self._fs
-            signal[i, :] = np.exp(
-                1j
-                * 2
-                * np.pi
-                * (
-                    self._f0[i] * sampling_time
-                    + 0.5 * self._k[i] * sampling_time**2
-                )
-            )
-
-        signal = amp @ signal
-
-        return signal
-
-
-class MultiCarrierSignal(Signal):
-    def __init__(self, fre_min, fre_max, fs, rng=None):
-        """Broadband signal consisting of mulitple narrowband signals modulated
-        on different carrier frequencies. Each signal on different carrier
-        frequency has a different DOA.
-
-        Args:
-            fs (float): Sampling frequency
             rng (np.random.Generator): Random generator used to generate random
                 numbers
         """
-        super().__init__(fs, rng)
-
-        self._fre_min = fre_min
-        self._fre_max = fre_max
+        super().__init__(f_min, f_max, fs, rng=rng)
 
     def gen(self, n, nsamples, amp=None):
         amp = self._get_amp(amp, n)
+        fre_ranges = self._gen_fre_ranges(n)
+
+        t = np.arange(nsamples) * 1 / self._fs
+        f0 = fre_ranges[:, 0]
+        k = (fre_ranges[:, 1] - fre_ranges[:, 0]) / t[-1]
+
+        signal = np.exp(
+            1j
+            * 2
+            * np.pi
+            * (f0.reshape(-1, 1) * t + 0.5 * k.reshape(-1, 1) * t**2)
+        )
+
+        signal = amp @ signal
+        return signal
+
+
+class MultiCarrierSignal(BoardSignal):
+    def __init__(self, f_min, f_max, fs, ncarriers=100, rng=None):
+        """Broadband signal consisting of mulitple narrowband signals modulated
+        on different carrier frequencies.
+
+        Args:
+            f_min (float): Minimum frequency
+            f_max (float): Maximum frequency
+            fs (int | float): Sampling frequency
+            ncarriers (int): Number of carrier frequencies in each broadband
+            rng (np.random.Generator): Random generator used to generate random
+                numbers
+        """
+        super().__init__(f_min, f_max, fs, rng=rng)
+        self._ncarriers = ncarriers
+
+    def gen(self, n, nsamples, amp=None):
+        amp = self._get_amp(amp, n)
+        fre_ranges = self._gen_fre_ranges(n)
 
         # generate random carrier frequencies
-        fres = self._rng.uniform(self._fre_min, self._fre_max, size=n)
+        fres = self._rng.uniform(
+            fre_ranges[:, 0].reshape(-1, 1),
+            fre_ranges[:, 1].reshape(-1, 1),
+            size=(n, self._ncarriers),
+        )
+        phase = self._rng.uniform(0, 2 * np.pi, size=(n, 1))
 
-        # Generate complex envelope
-        envelope = amp @ (
-            np.sqrt(1 / 2)
-            * (
-                self._rng.standard_normal(size=(n, nsamples))
-                + 1j * self._rng.standard_normal(size=(n, nsamples))
+        signal = (
+            np.sqrt(1 / self._ncarriers)
+            * np.exp(1j * 2 * np.pi * phase)
+            * np.sum(
+                np.exp(
+                    1j
+                    * 2
+                    * np.pi
+                    * np.repeat(np.expand_dims(fres, axis=2), nsamples, axis=2)
+                    / self._fs
+                    * np.arange(nsamples)
+                ),
+                axis=1,
             )
         )
 
-        signal = envelope * np.exp(
-            -1j
-            * 2
-            * np.pi
-            * fres.reshape(-1, 1)
-            / self._fs
-            * np.arange(nsamples)
-        )
+        signal = amp @ signal
 
         return signal

@@ -145,19 +145,7 @@ class Array(ABC):
 
         received = manifold_matrix @ incidence_signal
 
-        if snr is not None:
-            noise = (
-                1
-                / np.sqrt(10 ** (snr / 10))
-                * np.mean(np.abs(received))
-                * 1
-                / np.sqrt(2)
-                * (
-                    self._rng.standard_normal(size=received.shape)
-                    + 1j * self._rng.standard_normal(size=received.shape)
-                )
-            )
-            received = received + noise
+        received = self._add_awgn(received, snr)
 
         return received
 
@@ -192,21 +180,18 @@ class Array(ABC):
 
         received = np.fft.ifft(received_fre_domain, axis=1)
 
-        if snr is not None:
-            noise = (
-                1
-                / np.sqrt(10 ** (snr / 10))
-                * np.mean(np.abs(received))
-                * 1
-                / np.sqrt(2)
-                * (
-                    self._rng.standard_normal(size=received.shape)
-                    + 1j * self._rng.standard_normal(size=received.shape)
-                )
-            )
-            received = received + noise
+        received = self._add_awgn(received, snr)
 
         return received
+
+    def _add_awgn(self, signal, snr_db):
+        sig_pow = np.mean(np.abs(signal) ** 2, axis=1)
+        noise_pow = sig_pow / 10 ** (snr_db / 10)
+        noise = (np.sqrt(noise_pow / 2)).reshape(-1, 1) * (
+            self._rng.standard_normal(size=signal.shape)
+            + 1j * self._rng.standard_normal(size=signal.shape)
+        )
+        return signal + noise
 
 
 class UniformLinearArray(Array):
