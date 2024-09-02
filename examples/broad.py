@@ -4,6 +4,7 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 import matplotlib.pyplot as plt
 import numpy as np
+
 from doa_py.algorithm import cssm, imusic, tops
 from doa_py.arrays import UniformLinearArray
 from doa_py.plot import plot_spatial_spectrum

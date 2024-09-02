@@ -94,7 +94,7 @@ class ComplexStochasticSignal(NarrowSignal):
         return signal
 
 
-class BoardSignal(Signal):
+class BroadSignal(Signal):
     def __init__(self, f_min, f_max, fs, rng=None):
         self._f_min = f_min
         self._f_max = f_max
@@ -131,7 +131,7 @@ class BoardSignal(Signal):
         return ranges
 
 
-class ChirpSignal(BoardSignal):
+class ChirpSignal(BroadSignal):
     def __init__(self, f_min, f_max, fs, rng=None):
         """Chirp signal
 
@@ -163,7 +163,7 @@ class ChirpSignal(BoardSignal):
         return signal
 
 
-class MultiCarrierSignal(BoardSignal):
+class MultiCarrierSignal(BroadSignal):
     def __init__(self, f_min, f_max, fs, ncarriers=100, rng=None):
         """Broadband signal consisting of mulitple narrowband signals modulated
         on different carrier frequencies.
