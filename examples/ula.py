@@ -4,11 +4,10 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 import numpy as np
-
-from classical_doa.algorithm import esprit, l1_svd, music, omp, root_music
-from classical_doa.arrays import UniformLinearArray
-from classical_doa.plot import plot_estimated_value, plot_spatial_spectrum
-from classical_doa.signals import ComplexStochasticSignal
+from doa_py.algorithm import esprit, l1_svd, music, omp, root_music
+from doa_py.arrays import UniformLinearArray
+from doa_py.plot import plot_estimated_value, plot_spatial_spectrum
+from doa_py.signals import ComplexStochasticSignal
 
 # signal parameters
 num_snapshots = 300

@@ -7,20 +7,20 @@ def find_long_description():
 
 
 def find_version():
-    with open("classical_doa/__init__.py", encoding="utf-8") as f:
+    with open("doa_py/__init__.py", encoding="utf-8") as f:
         for line in f:
             if line.startswith("__version__"):
                 return line.strip().split()[-1][1:-1]
 
 
 setup(
-    name="classical_doa",
+    name="doa_py",
     version=find_version(),
     packages=find_packages(),
-    description="Classical DOA estimation algorithms implemented in Python",
+    description="DOA estimation algorithms implemented in Python",
     author="Qian Xu",
     author_email="xuq3196@outlook.com",
-    url="https://github.com/zhiim/classical_doa",
+    url="https://github.com/zhiim/doa_py",
     long_description=find_long_description(),
     long_description_content_type="text/markdown",
     license="MIT",

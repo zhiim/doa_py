@@ -4,11 +4,10 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 import matplotlib.pyplot as plt
 import numpy as np
-
-from classical_doa.algorithm import cssm, imusic, tops
-from classical_doa.arrays import UniformLinearArray
-from classical_doa.plot import plot_spatial_spectrum
-from classical_doa.signals import ChirpSignal
+from doa_py.algorithm import cssm, imusic, tops
+from doa_py.arrays import UniformLinearArray
+from doa_py.plot import plot_spatial_spectrum
+from doa_py.signals import ChirpSignal
 
 # signal parameters
 angle_incidence = np.array([0, 30])

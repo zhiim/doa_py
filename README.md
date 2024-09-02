@@ -1,20 +1,20 @@
-# Classical DOA
+# DOA_py
 
-Classical DOA Estimation algorithms implemented in Python.
+DOA Estimation algorithms implemented in Python. It can be used for ULA, UCA and broadband/wideband DOA estimation.
 
 ## Getting Started
 
 ### Installation
 
 ```bash
-pip install classical_doa
+pip install doa_py
 ```
 
 or install from source
 
 ```bash
-git clone https://github.com/zhiim/classical_doa.git
-cd classical_doa
+git clone https://github.com/zhiim/doa_py.git
+cd doa_py
 pip install .
 ```
 
@@ -25,9 +25,9 @@ A sample example of DOA estimation using MUSIC algorithm.
 ```python
 import numpy as np
 
-from classical_doa import arrays, signals
-from classical_doa.algorithm import music
-from classical_doa.plot import plot_spatial_spectrum
+from doa_py import arrays, signals
+from doa_py.algorithm import music
+from doa_py.plot import plot_spatial_spectrum
 
 # Create a 8-element ULA with 0.5m spacing
 ula = arrays.UniformLinearArray(m=8, dd=0.5)
@@ -60,7 +60,7 @@ plot_spatial_spectrum(
 ```
 
 You will a get a figure like this:
-![music_spectrum](https://github.com/zhiim/classical_doa/blob/master/pics/music_spectrum.svg)
+![music_spectrum](https://github.com/zhiim/doa_py/blob/master/pics/music_spectrum.svg)
 
 Check `examples` for more examples.
 
@@ -82,19 +82,19 @@ Check `examples` for more examples.
 
 ### Algorithms
 
-- ULA
+- DOA estimation for ULA
   - [x] MUSIC
   - [x] ESPRIT
   - [x] Root-MUSIC
   - [x] OMP
   - [x] l1-SVD
-- URA
+- DOA estimation for URA
   - [ ] URA-MUSIC
   - [ ] URA-ESPRIT
-- UCA
+- DOA estimation for UCA
   - [x] UCA-RB-MUSIC
   - [x] UCA-ESPRIT
-- Broadband
+- Broadband/Wideband DOA estimation
   - [x] ISSM
   - [x] CSSM
   - [x] TOPS
