@@ -27,7 +27,7 @@ def divide_into_fre_bins(received_data, num_groups, fs):
         fs : sampling frequency
 
     Returns:
-        `signal_fre_bins`: a m*n*l tensor, in which m equals to number of
+        `signal_fre_bins`: a (m, n, l) tensor, in which m equals to number of
             antennas, n is equals to point of FFT, l is the number of groups
         `fre_bins`: corresponding freqeuncy of each point in FFT output
     """

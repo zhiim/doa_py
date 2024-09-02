@@ -60,8 +60,8 @@ def cssm(
     array,
     fs,
     angle_grids,
-    fre_ref,
     pre_estimate,
+    fre_ref=None,
     unit="deg",
 ):
     """Coherent Signal Subspace Method (CSSM) for wideband DOA estimation.
@@ -73,8 +73,9 @@ def cssm(
         fs: sampling frequency
         angle_grids : Angle grids corresponding to spatial spectrum. It should
             be a numpy array.
-        fre_ref: reference frequency
         pre_estimate: pre-estimated angles
+        fre_ref: reference frequency. If it's not provided the frequency point
+            with the maximum power will be used.
         unit : Unit of angle, 'rad' for radians, 'deg' for degrees. Defaults to
             'deg'.
 
@@ -91,6 +92,11 @@ def cssm(
     # Divide the received signal into multiple frequency points
     signal_fre_bins = np.fft.fft(received_data, axis=1)
     fre_bins = np.fft.fftfreq(num_snapshots, 1 / fs)
+
+    if fre_ref is None:
+        # Find the frequency point with the maximum power
+        fre_ref = fre_bins[np.argmax(np.abs(signal_fre_bins).sum(axis=0))]
+        print(fre_ref)
 
     # Calculate the manifold matrix corresponding to the pre-estimated angles at
     # the reference frequency point
@@ -128,7 +134,7 @@ def tops(
     fs,
     num_groups,
     angle_grids,
-    fre_ref,
+    fre_ref=None,
     unit="deg",
 ):
     """Test of orthogonality of projected subspaces (TOPS) method for wideband
@@ -142,7 +148,8 @@ def tops(
         num_groups: Number of groups for FFT, each group performs an
             independent FFT.
         angle_grids: Grid points of spatial spectrum, should be a numpy array.
-        fre_ref: Reference frequency point.
+        fre_ref: reference frequency. If it's not provided the frequency point
+            with the maximum power will be used.
         unit: Unit of angle measurement, 'rad' for radians, 'deg' for degrees.
             Defaults to 'deg'.
 
@@ -156,6 +163,10 @@ def tops(
     signal_fre_bins, fre_bins = divide_into_fre_bins(
         received_data, num_groups, fs
     )
+
+    if fre_ref is None:
+        fre_ref = fre_bins[np.argmax(np.abs(signal_fre_bins).sum(axis=(0, 2)))]
+        print(fre_ref)
 
     # index of reference frequency in FFT output
     ref_index = int(fre_ref / (fs / fre_bins.size))
