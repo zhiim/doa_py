@@ -32,7 +32,7 @@ from classical_doa.plot import plot_spatial_spectrum
 # Create a 8-element ULA with 0.5m spacing
 ula = arrays.UniformLinearArray(m=8, dd=0.5)
 # Create a complex stochastic signal
-source = signals.ComplexStochasticSignal(fre=3e8, fs=1e9)
+source = signals.ComplexStochasticSignal(fc=3e8)
 
 # Simulate the received data
 received_data = ula.received_signal(
@@ -60,7 +60,7 @@ plot_spatial_spectrum(
 ```
 
 You will a get a figure like this:
-![music_spectrum](pics/music_spectrum.svg)
+![music_spectrum](https://github.com/zhiim/classical_doa/blob/master/pics/music_spectrum.svg)
 
 Check `examples` for more examples.
 
@@ -75,10 +75,10 @@ Check `examples` for more examples.
 ### Signal Models
 
 - Narrowband  
-   complex stochastic signal
+  ComplexStochasticSignal
 - Broadband  
-   chirp signal
-  broadband signal consisting of multiple narrowband signals
+  ChirpSignal
+  MultiCarrierSignal
 
 ### Algorithms
 
