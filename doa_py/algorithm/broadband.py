@@ -54,6 +54,54 @@ def imusic(
     return np.squeeze(spectrum)
 
 
+def norm_music(
+    received_data, num_signal, array, fs, angle_grids, num_groups, unit="deg"
+):
+    """Normalized incoherent MUSIC estimator for wideband DOA estimation.
+
+    Args:
+        received_data : Array received signals
+        num_signal : Number of signals
+        array : Instance of array class
+        fs: sampling frequency
+        angle_grids : Angle grids corresponding to spatial spectrum. It should
+            be a numpy array.
+        num_groups: Divide sampling points into serveral groups, and do FFT
+            separately in each group
+        unit : Unit of angle, 'rad' for radians, 'deg' for degrees. Defaults to
+            'deg'.
+
+    References:
+        Salvati, Daniele, Carlo Drioli, and Gian Luca Foresti. “Incoherent
+        Frequency Fusion for Broadband Steered Response Power Algorithms in
+        Noisy Environments.” IEEE Signal Processing Letters 21, no. 5
+        (May 2014): 581–85. https://doi.org/10.1109/LSP.2014.2311164.
+    """
+    signal_fre_bins, fre_bins = divide_into_fre_bins(
+        received_data, num_groups, fs
+    )
+
+    # MUSIC algorithm in every frequency point
+    spectrum_fre_bins = np.zeros((signal_fre_bins.shape[1], angle_grids.size))
+    for i, fre in enumerate(fre_bins):
+        spectrum_fre_bins[i, :] = music(
+            received_data=signal_fre_bins[:, i, :],
+            num_signal=num_signal,
+            array=array,
+            signal_fre=fre,
+            angle_grids=angle_grids,
+            unit=unit,
+        )
+
+    spectrum = np.mean(
+        spectrum_fre_bins
+        / np.linalg.norm(spectrum_fre_bins, ord=np.inf, axis=1).reshape(-1, 1),
+        axis=0,
+    )
+
+    return np.squeeze(spectrum)
+
+
 def cssm(
     received_data,
     num_signal,
