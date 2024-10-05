@@ -75,10 +75,11 @@ Check `examples` for more examples.
 ### Signal Models
 
 - Narrowband  
-  ComplexStochasticSignal
+  **ComplexStochasticSignal**: The amplitude of signals at each sampling point is a complex random variable.
+  **RandomFreqSignal**: Signals transmitted by different sources have different intermediate frequencies (IF).
 - Broadband  
-  ChirpSignal
-  MultiCarrierSignal
+  **ChirpSignal**: Chirp signals with different chirp bandwidths within the sampling period.
+  **MultiFreqSignal**: Broadband signals formed by the superposition of multiple single-frequency signals within a certain frequency band.
 
 ### Algorithms
 

@@ -53,6 +53,13 @@ class Signal(ABC):
 
 class NarrowSignal(Signal):
     def __init__(self, fc, rng=None):
+        """Narrowband signal
+
+        Args:
+            fc (float): Signal frequency
+            rng (np.random.Generator): Random generator used to generate random
+                numbers
+        """
         self._fc = fc
 
         super().__init__(rng=rng)
@@ -73,8 +80,7 @@ class ComplexStochasticSignal(NarrowSignal):
         signal)
 
         Args:
-            nsamples (int): Number of sampling points
-            fre (float): Signal frequency
+            fc (float): Signal frequency
             rng (np.random.Generator): Random generator used to generate random
                 numbers
         """
@@ -90,6 +96,43 @@ class ComplexStochasticSignal(NarrowSignal):
                 self._rng.standard_normal(size=(n, nsamples))
                 + 1j * self._rng.standard_normal(size=(n, nsamples))
             )
+        )
+        return signal
+
+
+class RandomFreqSignal(NarrowSignal):
+    def __init__(self, fc, freq_ratio=0.05, rng=None):
+        """Random frequency signal
+
+        Args:
+            fc (float): Signal frequency
+            freq_ratio (float): Ratio of the maximum frequency deviation from fc
+            rng (np.random.Generator): Random generator used to generate random
+                numbers
+        """
+        super().__init__(fc, rng)
+
+        assert (
+            0 < freq_ratio < 0.1
+        ), "This signal must be narrowband: freq_ratio in (0, 0.1)"
+        self._freq_ratio = freq_ratio
+
+    def gen(self, n, nsamples, amp=None):
+        amp = self._get_amp(amp, n)
+
+        fs = self._fc * self._freq_ratio * 5
+        # Generate random frequency signal
+        signal = (
+            amp
+            @ np.exp(
+                1j
+                * 2
+                * np.pi
+                * self._rng.uniform(0, self._freq_ratio * self._fc, size=(n, 1))
+                / fs
+                * np.arange(nsamples)
+            )
+            * np.exp(1j * self._rng.uniform(0, 2 * np.pi, size=(n, 1)))  # phase
         )
         return signal
 
@@ -157,13 +200,13 @@ class ChirpSignal(BroadSignal):
             * 2
             * np.pi
             * (f0.reshape(-1, 1) * t + 0.5 * k.reshape(-1, 1) * t**2)
-        )
+        ) * np.exp(1j * self._rng.uniform(0, 2 * np.pi, size=(n, 1)))  # phase
 
         signal = amp @ signal
         return signal
 
 
-class MultiCarrierSignal(BroadSignal):
+class MultiFreqSignal(BroadSignal):
     def __init__(self, f_min, f_max, fs, ncarriers=100, rng=None):
         """Broadband signal consisting of mulitple narrowband signals modulated
         on different carrier frequencies.
@@ -189,23 +232,24 @@ class MultiCarrierSignal(BroadSignal):
             fre_ranges[:, 1].reshape(-1, 1),
             size=(n, self._ncarriers),
         )
-        phase = self._rng.uniform(0, 2 * np.pi, size=(n, 1))
 
-        signal = (
-            np.sqrt(1 / self._ncarriers)
-            * np.exp(1j * 2 * np.pi * phase)
-            * np.sum(
-                np.exp(
-                    1j
-                    * 2
-                    * np.pi
-                    * np.repeat(np.expand_dims(fres, axis=2), nsamples, axis=2)
-                    / self._fs
-                    * np.arange(nsamples)
-                ),
-                axis=1,
+        signal = np.sum(
+            np.exp(
+                1j
+                * 2
+                * np.pi
+                * np.repeat(np.expand_dims(fres, axis=2), nsamples, axis=2)
+                / self._fs
+                * np.arange(nsamples)
             )
+            * np.exp(
+                1j
+                * self._rng.uniform(0, 2 * np.pi, size=(n, self._ncarriers, 1))
+            ),
+            axis=1,
         )
+
+        signal = signal / np.sqrt(np.mean(np.abs(signal) ** 2))
 
         signal = amp @ signal
 

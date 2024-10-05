@@ -145,7 +145,8 @@ class Array(ABC):
 
         received = manifold_matrix @ incidence_signal
 
-        received = self._add_awgn(received, snr)
+        if snr is not None:
+            received = self._add_awgn(received, snr)
 
         return received
 
@@ -180,7 +181,8 @@ class Array(ABC):
 
         received = np.fft.ifft(received_fre_domain, axis=1)
 
-        received = self._add_awgn(received, snr)
+        if snr is not None:
+            received = self._add_awgn(received, snr)
 
         return received
 

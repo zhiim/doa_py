@@ -11,6 +11,7 @@ def find_version():
         for line in f:
             if line.startswith("__version__"):
                 return line.strip().split()[-1][1:-1]
+    return ""
 
 
 setup(
