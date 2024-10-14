@@ -2,6 +2,8 @@ from abc import ABC
 
 import numpy as np
 
+from .signals import BroadSignal
+
 C = 3e8  # wave speed
 
 
@@ -91,7 +93,6 @@ class Array(ABC):
         snr=None,
         nsamples=100,
         amp=None,
-        broadband=False,
         unit="deg",
     ):
         """Generate array received signal based on array signal model
@@ -109,19 +110,18 @@ class Array(ABC):
             snr: Signal-to-noise ratio. If set to None, no noise will be added
             nsamples (int): Number of snapshots, defaults to 100
             amp: The amplitude of each signal, 1d numpy array
-            broadband: Whether to generate broadband received signals
             unit: The unit of the angle, `rad` represents radian,
                 `deg` represents degree. Defaults to 'deg'.
         """
         # Convert the angle from degree to radians
         angle_incidence = self._unify_unit(angle_incidence, unit)
 
-        if broadband is False:
-            received = self._gen_narrowband(
+        if isinstance(signal, BroadSignal):
+            received = self._gen_broadband(
                 signal, snr, nsamples, angle_incidence, amp
             )
         else:
-            received = self._gen_broadband(
+            received = self._gen_narrowband(
                 signal, snr, nsamples, angle_incidence, amp
             )
 

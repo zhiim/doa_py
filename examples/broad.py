@@ -49,7 +49,6 @@ received_data = array.received_signal(
     snr=snr,
     nsamples=num_snapshots,
     angle_incidence=angle_incidence,
-    broadband=True,
     unit="deg",
 )
 
