@@ -150,10 +150,28 @@ class BroadSignal(Signal):
         return self._fs
 
     @abstractmethod
-    def gen(self, n, nsamples, amp=None):
+    def gen(
+        self, n, nsamples, min_length_ratio=0.1, no_overlap=False, amp=None
+    ):
+        """Generate sampled signals
+
+        Args:
+            n (int): Number of signals
+            nsamples (int): Number of snapshots
+            min_length_ratio (float): Minimum length ratio of the frequency
+                range in (f_max - f_min)
+            no_overlap (bool): If True, generate signals with non-overlapping
+                subbands
+            amp (np.array): Amplitude of the signals (1D array of size n), used
+                to define different amplitudes for different signals.
+                By default it will generate equal amplitude signal.
+
+        Returns:
+            signal (np.array): Sampled signals
+        """
         raise NotImplementedError
 
-    def _gen_fre_ranges(self, n, min_length_ratio=0.3):
+    def _gen_fre_bands(self, n, min_length_ratio=0.1):
         """Generate frequency ranges for each boardband signal
 
         Args:
@@ -166,12 +184,41 @@ class BroadSignal(Signal):
                 (n, 2)
         """
         min_length = (self._f_max - self._f_min) * min_length_ratio
-        ranges = np.zeros((n, 2))
+        bands = np.zeros((n, 2))
         for i in range(n):
             length = self._rng.uniform(min_length, self._f_max - self._f_min)
             start = self._rng.uniform(self._f_min, self._f_max - length)
-            ranges[i] = [start, start + length]
-        return ranges
+            bands[i] = [start, start + length]
+        return bands
+
+    def _generate_non_overlapping_bands(self, n, min_length_ratio=0.1):
+        """Generate n non-overlapping frequency bands within a specified range.
+
+        Args:
+            n (int): Number of non-overlapping bands to generate.
+            min_length_ratio (float): Minimum length of each band as a ratio of
+               the maximum possible length.
+
+        Returns:
+            np.ndarray: An array of shape (n, 2) where each row represents a
+               frequency band [start, end].
+        """
+        max_length = (self._f_max - self._f_min) // n
+        min_length = max_length * min_length_ratio
+
+        bands = np.zeros((n, 2))
+
+        for i in range(n):
+            length = self._rng.uniform(min_length, max_length)
+            start = self._rng.uniform(
+                self._f_min + i * max_length,
+                self._f_min + (i + 1) * max_length - length,
+            )
+            new_band = [start, start + length]
+
+            bands[i] = new_band
+
+        return bands
 
 
 class ChirpSignal(BroadSignal):
@@ -187,9 +234,15 @@ class ChirpSignal(BroadSignal):
         """
         super().__init__(f_min, f_max, fs, rng=rng)
 
-    def gen(self, n, nsamples, amp=None):
+    def gen(
+        self, n, nsamples, min_length_ratio=0.1, no_overlap=False, amp=None
+    ):
         amp = self._get_amp(amp, n)
-        fre_ranges = self._gen_fre_ranges(n)
+        if no_overlap:
+            fre_ranges = self._generate_non_overlapping_bands(
+                n, min_length_ratio
+            )
+        fre_ranges = self._gen_fre_bands(n, min_length_ratio)
 
         t = np.arange(nsamples) * 1 / self._fs
         f0 = fre_ranges[:, 0]
@@ -222,9 +275,16 @@ class MultiFreqSignal(BroadSignal):
         super().__init__(f_min, f_max, fs, rng=rng)
         self._ncarriers = ncarriers
 
-    def gen(self, n, nsamples, amp=None):
+    def gen(
+        self, n, nsamples, min_length_ratio=0.1, no_overlap=False, amp=None
+    ):
         amp = self._get_amp(amp, n)
-        fre_ranges = self._gen_fre_ranges(n)
+        if no_overlap:
+            fre_ranges = self._generate_non_overlapping_bands(
+                n, min_length_ratio
+            )
+        else:
+            fre_ranges = self._gen_fre_bands(n, min_length_ratio)
 
         # generate random carrier frequencies
         fres = self._rng.uniform(

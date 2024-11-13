@@ -2,7 +2,7 @@ from abc import ABC
 
 import numpy as np
 
-from .signals import BroadSignal
+from .signals import BroadSignal, NarrowSignal, Signal
 
 C = 3e8  # wave speed
 
@@ -88,11 +88,13 @@ class Array(ABC):
 
     def received_signal(
         self,
-        signal,
+        signal: Signal,
         angle_incidence,
         snr=None,
         nsamples=100,
         amp=None,
+        min_length_ratio=0.1,
+        no_overlap=False,
         unit="deg",
     ):
         """Generate array received signal based on array signal model
@@ -110,6 +112,10 @@ class Array(ABC):
             snr: Signal-to-noise ratio. If set to None, no noise will be added
             nsamples (int): Number of snapshots, defaults to 100
             amp: The amplitude of each signal, 1d numpy array
+            min_length_ratio (float): Minimum length ratio of the frequency
+                range in (f_max - f_min)
+            no_overlap (bool): If True, generate signals with non-overlapping
+                subbands
             unit: The unit of the angle, `rad` represents radian,
                 `deg` represents degree. Defaults to 'deg'.
         """
@@ -118,16 +124,24 @@ class Array(ABC):
 
         if isinstance(signal, BroadSignal):
             received = self._gen_broadband(
-                signal, snr, nsamples, angle_incidence, amp
+                signal,
+                snr,
+                nsamples,
+                angle_incidence,
+                amp,
+                min_length_ratio,
+                no_overlap,
             )
-        else:
+        if isinstance(signal, NarrowSignal):
             received = self._gen_narrowband(
                 signal, snr, nsamples, angle_incidence, amp
             )
 
         return received
 
-    def _gen_narrowband(self, signal, snr, nsamples, angle_incidence, amp):
+    def _gen_narrowband(
+        self, signal: NarrowSignal, snr, nsamples, angle_incidence, amp
+    ):
         """Generate narrowband received signal
 
         `azimuth` and `elevation` are already in radians
@@ -150,7 +164,16 @@ class Array(ABC):
 
         return received
 
-    def _gen_broadband(self, signal, snr, nsamples, angle_incidence, amp):
+    def _gen_broadband(
+        self,
+        signal: BroadSignal,
+        snr,
+        nsamples,
+        angle_incidence,
+        amp,
+        min_length_ratio=0.1,
+        no_overlap=False,
+    ):
         """Generate broadband received signal
 
         `azimuth` and `elevation` are already in radians
@@ -162,7 +185,13 @@ class Array(ABC):
 
         num_antennas = self._element_position.shape[0]
 
-        incidence_signal = signal.gen(n=num_signal, nsamples=nsamples, amp=amp)
+        incidence_signal = signal.gen(
+            n=num_signal,
+            nsamples=nsamples,
+            min_length_ratio=min_length_ratio,
+            no_overlap=no_overlap,
+            amp=amp,
+        )
 
         # generate array signal in frequency domain
         signal_fre_domain = np.fft.fft(incidence_signal, axis=1)

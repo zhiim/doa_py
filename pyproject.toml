@@ -1,6 +1,6 @@
 [project]
 name = "doa_py"
-version = "0.2.2"
+version = "0.2.3"
 description = "DOA estimation algorithms implemented in Python"
 readme = "README.md"
 license = { text = "MIT" }

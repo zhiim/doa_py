@@ -144,7 +144,6 @@ def cssm(
     if fre_ref is None:
         # Find the frequency point with the maximum power
         fre_ref = fre_bins[np.argmax(np.abs(signal_fre_bins).sum(axis=0))]
-        print(fre_ref)
 
     # Calculate the manifold matrix corresponding to the pre-estimated angles at
     # the reference frequency point
@@ -214,7 +213,6 @@ def tops(
 
     if fre_ref is None:
         fre_ref = fre_bins[np.argmax(np.abs(signal_fre_bins).sum(axis=(0, 2)))]
-        print(fre_ref)
 
     # index of reference frequency in FFT output
     ref_index = int(fre_ref / (fs / fre_bins.size))
