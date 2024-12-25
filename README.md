@@ -84,6 +84,7 @@ Check [examples](https://github.com/zhiim/doa_py/tree/master/examples) for more 
 - **Broadband**
   - _ChirpSignal_: Chirp signals with different chirp bandwidths within the sampling period.
   - _MultiFreqSignal_: Broadband signals formed by the superposition of multiple single-frequency signals within a certain frequency band.
+  - _MixedSignal_: Narrorband and broadband mixed signal
 
 ### Algorithms
 

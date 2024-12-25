@@ -200,25 +200,10 @@ def plot_spatial_spectrum_2d(
 def plot_estimated_value_2d(
     estimated_azimuth,
     estimated_elevation,
-    num_signal,
     ground_truth=None,
     unit="deg",
-    x_label="Angle",
-    y_label="Spectrum",
 ):
-    """Display estimated angle values
-
-    Args:
-        estimates: Angle estimates
-        num_signal: Number of signals
-        ground_truth: True incident angles
-        ticks_min (int, optional): Minimum value for x-axis ticks.
-            Defaults to -90.
-        ticks_max (int, optional): Maximum value for x-axis ticks.
-            Defaults to 90.
-        x_label (str, optional): x-axis label. Defaults to "Angle".
-        y_label (str, optional): y-axis label. Defaults to "Spetrum".
-    """
+    """Display estimated angle values"""
     if unit == "deg":
         estimated_azimuth = estimated_azimuth / 180 * np.pi
 

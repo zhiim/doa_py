@@ -1,5 +1,5 @@
 """
-# DOA_py
+# DOA_Py
 
 DOA Estimation algorithms implemented in Python. It can be used for ULA, UCA and
 broadband/wideband DOA estimation.
@@ -65,7 +65,8 @@ plot_spatial_spectrum(
 You will a get a figure like this:
 ![music_spectrum](https://github.com/zhiim/doa_py/blob/master/pics/music_spectrum.svg)
 
-Check `examples` for more examples.
+Check [examples](https://github.com/zhiim/doa_py/tree/master/examples) for more
+examples.
 
 ## What's implemented
 
@@ -77,16 +78,17 @@ Check `examples` for more examples.
 
 ### Signal Models
 
-- Narrowband
-  **ComplexStochasticSignal**: The amplitude of signals at each sampling point
-  is a complex random variable.
-  **RandomFreqSignal**: Signals transmitted by different sources have different
-  intermediate frequencies (IF).
-- Broadband
-  **ChirpSignal**: Chirp signals with different chirp bandwidths within the
-  sampling period.
-  **MultiFreqSignal**: Broadband signals formed by the superposition of multiple
-  single-frequency signals within a certain frequency band.
+- **Narrowband**
+  - _ComplexStochasticSignal_: The amplitude of signals at each sampling point
+    is a complex random variable.
+  - _RandomFreqSignal_: Signals transmitted by different sources have different
+    intermediate frequencies (IF).
+- **Broadband**
+  - _ChirpSignal_: Chirp signals with different chirp bandwidths within the
+    sampling period.
+  - _MultiFreqSignal_: Broadband signals formed by the superposition of multiple
+    single-frequency signals within a certain frequency band.
+  - _MixedSignal_: Narrorband and broadband mixed signal
 
 ### Algorithms
 
@@ -109,9 +111,9 @@ Check `examples` for more examples.
 
 ## License
 
-This project is licensed under the [MIT](LICENSE) License - see the LICENSE
-file for details.
+This project is licensed under the [MIT](LICENSE) License - see the LICENSE file
+for details.
 """
 
-__version__ = "0.2.3"
+__version__ = "0.3.0"
 __author__ = "Qian Xu"

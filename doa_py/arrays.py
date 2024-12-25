@@ -93,9 +93,8 @@ class Array(ABC):
         snr=None,
         nsamples=100,
         amp=None,
-        min_length_ratio=0.1,
-        no_overlap=False,
         unit="deg",
+        **kwargs,
     ):
         """Generate array received signal based on array signal model
 
@@ -112,12 +111,10 @@ class Array(ABC):
             snr: Signal-to-noise ratio. If set to None, no noise will be added
             nsamples (int): Number of snapshots, defaults to 100
             amp: The amplitude of each signal, 1d numpy array
-            min_length_ratio (float): Minimum length ratio of the frequency
-                range in (f_max - f_min)
-            no_overlap (bool): If True, generate signals with non-overlapping
-                subbands
             unit: The unit of the angle, `rad` represents radian,
                 `deg` represents degree. Defaults to 'deg'.
+            **kwargs: Additional parameters for generating broadband signal,
+                check `gen` method of `BroadSignal`.
         """
         # Convert the angle from degree to radians
         angle_incidence = self._unify_unit(angle_incidence, unit)
@@ -129,8 +126,7 @@ class Array(ABC):
                 nsamples,
                 angle_incidence,
                 amp,
-                min_length_ratio,
-                no_overlap,
+                **kwargs,
             )
         if isinstance(signal, NarrowSignal):
             received = self._gen_narrowband(
@@ -171,8 +167,7 @@ class Array(ABC):
         nsamples,
         angle_incidence,
         amp,
-        min_length_ratio=0.1,
-        no_overlap=False,
+        **kwargs,
     ):
         """Generate broadband received signal
 
@@ -188,9 +183,8 @@ class Array(ABC):
         incidence_signal = signal.gen(
             n=num_signal,
             nsamples=nsamples,
-            min_length_ratio=min_length_ratio,
-            no_overlap=no_overlap,
             amp=amp,
+            **kwargs,
         )
 
         # generate array signal in frequency domain

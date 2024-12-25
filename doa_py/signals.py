@@ -1,6 +1,10 @@
 from abc import ABC, abstractmethod
+from typing import Literal, Optional, Union
 
 import numpy as np
+import numpy.typing as npt
+
+ListLike = Union[npt.NDArray[np.number], list[int | float | complex]]
 
 
 class Signal(ABC):
@@ -10,13 +14,13 @@ class Signal(ABC):
     generate simulated sampled signals.
     """
 
-    def __init__(self, rng=None):
+    def __init__(self, rng: Optional[np.random.Generator] = None):
         if rng is None:
             self._rng = np.random.default_rng()
         else:
             self._rng = rng
 
-    def set_rng(self, rng):
+    def set_rng(self, rng: np.random.Generator):
         """Setting random number generator
 
         Args:
@@ -25,17 +29,32 @@ class Signal(ABC):
         """
         self._rng = rng
 
-    def _get_amp(self, amp, n):
+    def _get_amp(
+        self,
+        amp: Optional[ListLike],
+        n: int,
+    ) -> npt.NDArray[np.number]:
         # Default to generate signals with equal amplitudes
         if amp is None:
             amp = np.diag(np.ones(n))
         else:
-            amp = np.diag(np.squeeze(amp))
+            if not isinstance(amp, np.ndarray):
+                amp = np.array(amp)
+
+            amp = np.squeeze(amp)
+            if not (amp.ndim == 1 and amp.size == n):
+                raise TypeError(
+                    "amp should be an 1D array of size n = {}".format(n)
+                )
+
+            amp = np.diag(amp)
 
         return amp
 
     @abstractmethod
-    def gen(self, n, nsamples, amp=None):
+    def gen(
+        self, n: int, nsamples: int, amp=Optional[ListLike]
+    ) -> npt.NDArray[np.complex128]:
         """Generate sampled signals
 
         Args:
@@ -52,7 +71,9 @@ class Signal(ABC):
 
 
 class NarrowSignal(Signal):
-    def __init__(self, fc, rng=None):
+    def __init__(
+        self, fc: Union[int, float], rng: Optional[np.random.Generator] = None
+    ):
         """Narrowband signal
 
         Args:
@@ -70,7 +91,9 @@ class NarrowSignal(Signal):
         return self._fc
 
     @abstractmethod
-    def gen(self, n, nsamples, amp=None):
+    def gen(
+        self, n: int, nsamples: int, amp: Optional[ListLike] = None
+    ) -> npt.NDArray[np.complex128]:
         raise NotImplementedError
 
 
@@ -86,7 +109,7 @@ class ComplexStochasticSignal(NarrowSignal):
         """
         super().__init__(fc, rng)
 
-    def gen(self, n, nsamples, amp=None):
+    def gen(self, n, nsamples, amp=None) -> npt.NDArray[np.complex128]:
         amp = self._get_amp(amp, n)
 
         # Generate complex envelope
@@ -101,7 +124,12 @@ class ComplexStochasticSignal(NarrowSignal):
 
 
 class RandomFreqSignal(NarrowSignal):
-    def __init__(self, fc, freq_ratio=0.05, rng=None):
+    def __init__(
+        self,
+        fc: Union[int, float],
+        freq_ratio: float = 0.05,
+        rng: Optional[np.random.Generator] = None,
+    ):
         """Random frequency signal
 
         Args:
@@ -138,7 +166,13 @@ class RandomFreqSignal(NarrowSignal):
 
 
 class BroadSignal(Signal):
-    def __init__(self, f_min, f_max, fs, rng=None):
+    def __init__(
+        self,
+        f_min: Union[int, float],
+        f_max: Union[int, float],
+        fs: Union[int, float],
+        rng: Optional[np.random.Generator] = None,
+    ):
         self._f_min = f_min
         self._f_max = f_max
         self._fs = fs
@@ -151,27 +185,32 @@ class BroadSignal(Signal):
 
     @abstractmethod
     def gen(
-        self, n, nsamples, min_length_ratio=0.1, no_overlap=False, amp=None
+        self,
+        n: int,
+        nsamples: int,
+        amp: Optional[ListLike] = None,
+        min_length_ratio: float = 0.1,
+        no_overlap: bool = False,
     ):
         """Generate sampled signals
 
         Args:
             n (int): Number of signals
             nsamples (int): Number of snapshots
+            amp (np.array): Amplitude of the signals (1D array of size n), used
+                to define different amplitudes for different signals.
+                By default it will generate equal amplitude signal.
             min_length_ratio (float): Minimum length ratio of the frequency
                 range in (f_max - f_min)
             no_overlap (bool): If True, generate signals with non-overlapping
                 subbands
-            amp (np.array): Amplitude of the signals (1D array of size n), used
-                to define different amplitudes for different signals.
-                By default it will generate equal amplitude signal.
 
         Returns:
             signal (np.array): Sampled signals
         """
         raise NotImplementedError
 
-    def _gen_fre_bands(self, n, min_length_ratio=0.1):
+    def _gen_fre_bands(self, n: int, min_length_ratio: float = 0.1):
         """Generate frequency ranges for each boardband signal
 
         Args:
@@ -191,7 +230,9 @@ class BroadSignal(Signal):
             bands[i] = [start, start + length]
         return bands
 
-    def _generate_non_overlapping_bands(self, n, min_length_ratio=0.1):
+    def _generate_non_overlapping_bands(
+        self, n: int, min_length_ratio: float = 0.1
+    ):
         """Generate n non-overlapping frequency bands within a specified range.
 
         Args:
@@ -235,14 +276,15 @@ class ChirpSignal(BroadSignal):
         super().__init__(f_min, f_max, fs, rng=rng)
 
     def gen(
-        self, n, nsamples, min_length_ratio=0.1, no_overlap=False, amp=None
-    ):
+        self, n, nsamples, amp=None, min_length_ratio=0.1, no_overlap=False
+    ) -> npt.NDArray[np.complex128]:
         amp = self._get_amp(amp, n)
         if no_overlap:
             fre_ranges = self._generate_non_overlapping_bands(
                 n, min_length_ratio
             )
-        fre_ranges = self._gen_fre_bands(n, min_length_ratio)
+        else:
+            fre_ranges = self._gen_fre_bands(n, min_length_ratio)
 
         t = np.arange(nsamples) * 1 / self._fs
         f0 = fre_ranges[:, 0]
@@ -256,11 +298,19 @@ class ChirpSignal(BroadSignal):
         ) * np.exp(1j * self._rng.uniform(0, 2 * np.pi, size=(n, 1)))  # phase
 
         signal = amp @ signal
+
         return signal
 
 
 class MultiFreqSignal(BroadSignal):
-    def __init__(self, f_min, f_max, fs, ncarriers=100, rng=None):
+    def __init__(
+        self,
+        f_min: Union[int, float],
+        f_max: Union[int, float],
+        fs: Union[int, float],
+        ncarriers: int = 100,
+        rng: Optional[np.random.Generator] = None,
+    ):
         """Broadband signal consisting of mulitple narrowband signals modulated
         on different carrier frequencies.
 
@@ -276,8 +326,8 @@ class MultiFreqSignal(BroadSignal):
         self._ncarriers = ncarriers
 
     def gen(
-        self, n, nsamples, min_length_ratio=0.1, no_overlap=False, amp=None
-    ):
+        self, n, nsamples, amp=None, min_length_ratio=0.1, no_overlap=False
+    ) -> npt.NDArray[np.complex128]:
         amp = self._get_amp(amp, n)
         if no_overlap:
             fre_ranges = self._generate_non_overlapping_bands(
@@ -310,6 +360,110 @@ class MultiFreqSignal(BroadSignal):
         )
 
         signal = signal / np.sqrt(np.mean(np.abs(signal) ** 2))
+
+        signal = amp @ signal
+
+        return signal
+
+
+class MixedSignal(BroadSignal):
+    def __init__(
+        self,
+        f_min: Union[int, float],
+        f_max: Union[int, float],
+        fs: Union[int, float],
+        rng: Optional[np.random.Generator] = None,
+        base: Literal["chirp", "multifreq"] = "chirp",
+    ):
+        """Narrorband and broadband mixed signal
+
+        Args:
+            f_min (float): Minimum frequency
+            f_max (float): Maximum frequency
+            fs (int | float): Sampling frequency
+            rng (np.random.Generator): Random generator used to generate random
+                numbers
+            base (str): Type of base signal, either 'chirp' or 'multifreq'
+
+        Raises:
+            ValueError: If base is not 'chirp' or 'multifreq'
+        """
+        if base not in ["chirp", "multifreq"]:
+            raise ValueError("base must be either 'chirp' or 'multifreq'")
+        if base == "chirp":
+            self._base = ChirpSignal(f_min=f_min, f_max=f_max, fs=fs, rng=rng)
+        elif base == "multifreq":
+            self._base = MultiFreqSignal(
+                f_min=f_min, f_max=f_max, fs=fs, rng=rng
+            )
+
+        super().__init__(f_min, f_max, fs, rng)
+
+    def gen(
+        self,
+        n: int,
+        nsamples: int,
+        amp: Optional[ListLike] = None,
+        min_length_ratio: float = 0.1,
+        no_overlap: bool = False,
+        m: Optional[int] = None,
+        narrow_idx: Union[npt.NDArray[np.int_], list[int], None] = None,
+    ):
+        """Generate sampled signals
+
+        Args:
+            n (int): Number of all signals (narrowband and broadband)
+            nsamples (int): Number of snapshots
+            amp (np.array): Amplitude of the signals (1D array of size n), used
+                to define different amplitudes for different signals.
+                By default it will generate equal amplitude signal.
+            min_length_ratio (float): Minimum length ratio of the frequency
+                range in (f_max - f_min)
+            no_overlap (bool): If True, generate signals with non-overlapping
+                subbands
+            m (int): Number of narrowband signals inside `n`. If set to `None`,
+                it will use a random int smaller than n
+            narrow_idx (array): index of where narrowband signal is located in n
+                signals
+        """
+        if m is None:
+            m = self._rng.integers(1, n)
+        else:
+            if m < n:
+                raise ValueError(
+                    "Number of narrowband signals must be less than n"
+                )
+
+        amp = self._get_amp(amp, n)
+        if narrow_idx is None:
+            narrow_idx = self._rng.choice(n, m, replace=False)
+        else:
+            if len(narrow_idx) == m:
+                raise ValueError("narrow_idx must have m elements")
+
+        # generate broadband signals
+        broad_s = self._base.gen(
+            n=n - m,
+            nsamples=nsamples,
+            min_length_ratio=min_length_ratio,
+            no_overlap=no_overlap,
+        )
+
+        # generate narrowband signals
+        narrow_freqs = self._rng.uniform(
+            self._f_min, self._f_max, size=m
+        ).reshape(-1, 1)
+        narrow_s = (
+            np.exp(
+                1j * 2 * np.pi * narrow_freqs / self._fs * np.arange(nsamples)
+            )  # sine wave
+            * np.exp(1j * self._rng.uniform(0, 2 * np.pi, size=(m, 1)))  # phase
+        )
+
+        # combine narrowband and broadband signals
+        signal = np.zeros((n, nsamples), dtype=np.complex128)
+        signal[narrow_idx] = narrow_s
+        signal[~np.isin(np.arange(n), narrow_idx)] = broad_s
 
         signal = amp @ signal
 
