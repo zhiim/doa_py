@@ -1,4 +1,8 @@
-# DOA_py
+<div align="left">
+  <img src="pics/doa_py.svg" alt="DOA_Py logo" width="20%">
+</div>
+
+# DOA_Py
 
 DOA Estimation algorithms implemented in Python. It can be used for ULA, UCA and broadband/wideband DOA estimation.
 
@@ -74,12 +78,12 @@ Check [examples](https://github.com/zhiim/doa_py/tree/master/examples) for more 
 
 ### Signal Models
 
-- **Narrowband**  
-  _ComplexStochasticSignal_: The amplitude of signals at each sampling point is a complex random variable.  
-  _RandomFreqSignal_: Signals transmitted by different sources have different intermediate frequencies (IF).
-- **Broadband**  
-  _ChirpSignal_: Chirp signals with different chirp bandwidths within the sampling period.  
-  _MultiFreqSignal_: Broadband signals formed by the superposition of multiple single-frequency signals within a certain frequency band.
+- **Narrowband**
+  - _ComplexStochasticSignal_: The amplitude of signals at each sampling point is a complex random variable.
+  - _RandomFreqSignal_: Signals transmitted by different sources have different intermediate frequencies (IF).
+- **Broadband**
+  - _ChirpSignal_: Chirp signals with different chirp bandwidths within the sampling period.
+  - _MultiFreqSignal_: Broadband signals formed by the superposition of multiple single-frequency signals within a certain frequency band.
 
 ### Algorithms
 
