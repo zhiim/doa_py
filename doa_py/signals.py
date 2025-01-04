@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Literal, Optional, Union
+from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -20,6 +20,9 @@ class Signal(ABC):
         else:
             self._rng = rng
 
+        # caches used to generate the identical signals
+        self._cache = {}
+
     def set_rng(self, rng: np.random.Generator):
         """Setting random number generator
 
@@ -28,6 +31,15 @@ class Signal(ABC):
                 numbers
         """
         self._rng = rng
+
+    def _set_cache(self, key: str, value: Any):
+        """Set cache value
+
+        Args:
+            key (str): Cache key
+            value (Any): Cache value
+        """
+        self._cache[key] = value
 
     def _get_amp(
         self,
@@ -53,7 +65,11 @@ class Signal(ABC):
 
     @abstractmethod
     def gen(
-        self, n: int, nsamples: int, amp=Optional[ListLike]
+        self,
+        n: int,
+        nsamples: int,
+        amp=Optional[ListLike],
+        use_cache: bool = False,
     ) -> npt.NDArray[np.complex128]:
         """Generate sampled signals
 
@@ -63,6 +79,8 @@ class Signal(ABC):
             amp (np.array): Amplitude of the signals (1D array of size n), used
                 to define different amplitudes for different signals.
                 By default it will generate equal amplitude signal.
+            use_cache (bool): If True, use cache to generate identical signals.
+                Default to `False`.
 
         Returns:
             signal (np.array): Sampled signals
@@ -92,7 +110,11 @@ class NarrowSignal(Signal):
 
     @abstractmethod
     def gen(
-        self, n: int, nsamples: int, amp: Optional[ListLike] = None
+        self,
+        n: int,
+        nsamples: int,
+        amp: Optional[ListLike] = None,
+        use_cache: bool = False,
     ) -> npt.NDArray[np.complex128]:
         raise NotImplementedError
 
@@ -109,17 +131,28 @@ class ComplexStochasticSignal(NarrowSignal):
         """
         super().__init__(fc, rng)
 
-    def gen(self, n, nsamples, amp=None) -> npt.NDArray[np.complex128]:
+    def gen(
+        self, n, nsamples, amp=None, use_cache=False
+    ) -> npt.NDArray[np.complex128]:
         amp = self._get_amp(amp, n)
 
+        if use_cache and not self._cache == {}:
+            # use cache
+            real = self._cache["real"]
+            imag = self._cache["imag"]
+            assert real.shape == (n, nsamples) and imag.shape == (
+                n,
+                nsamples,
+            ), "Cache shape mismatch"
+        else:
+            # Generate random amp
+            real = self._rng.standard_normal(size=(n, nsamples))
+            imag = self._rng.standard_normal(size=(n, nsamples))
+            self._set_cache("real", real)
+            self._set_cache("imag", imag)
+
         # Generate complex envelope
-        signal = amp @ (
-            np.sqrt(1 / 2)
-            * (
-                self._rng.standard_normal(size=(n, nsamples))
-                + 1j * self._rng.standard_normal(size=(n, nsamples))
-            )
-        )
+        signal = amp @ (np.sqrt(1 / 2) * (real + 1j * imag))
         return signal
 
 
@@ -145,22 +178,31 @@ class RandomFreqSignal(NarrowSignal):
         ), "This signal must be narrowband: freq_ratio in (0, 0.1)"
         self._freq_ratio = freq_ratio
 
-    def gen(self, n, nsamples, amp=None):
+    def gen(self, n, nsamples, amp=None, use_cache=False):
         amp = self._get_amp(amp, n)
+
+        if use_cache and not self._cache == {}:
+            freq = self._cache["freq"]
+            phase = self._cache["phase"]
+            assert freq.shape == (n, 1) and phase.shape == (
+                n,
+                1,
+            ), "Cache shape mismatch"
+        else:
+            # Generate random phase signal
+            freq = self._rng.uniform(
+                0, self._freq_ratio * self._fc, size=(n, 1)
+            )
+            phase = self._rng.uniform(0, 2 * np.pi, size=(n, 1))
+            self._set_cache("freq", freq)
+            self._set_cache("phase", phase)
 
         fs = self._fc * self._freq_ratio * 5
         # Generate random frequency signal
         signal = (
             amp
-            @ np.exp(
-                1j
-                * 2
-                * np.pi
-                * self._rng.uniform(0, self._freq_ratio * self._fc, size=(n, 1))
-                / fs
-                * np.arange(nsamples)
-            )
-            * np.exp(1j * self._rng.uniform(0, 2 * np.pi, size=(n, 1)))  # phase
+            @ np.exp(1j * 2 * np.pi * freq / fs * np.arange(nsamples))
+            * np.exp(1j * phase)  # phase
         )
         return signal
 
@@ -189,8 +231,10 @@ class BroadSignal(Signal):
         n: int,
         nsamples: int,
         amp: Optional[ListLike] = None,
+        use_cache: bool = False,
         min_length_ratio: float = 0.1,
         no_overlap: bool = False,
+        delay: Optional[Union[npt.NDArray, int, float]] = None,
     ):
         """Generate sampled signals
 
@@ -200,10 +244,13 @@ class BroadSignal(Signal):
             amp (np.array): Amplitude of the signals (1D array of size n), used
                 to define different amplitudes for different signals.
                 By default it will generate equal amplitude signal.
+            use_cache (bool): If True, use cache to generate identical signals.
+                Default to `False`.
             min_length_ratio (float): Minimum length ratio of the frequency
                 range in (f_max - f_min)
             no_overlap (bool): If True, generate signals with non-overlapping
                 subbands
+            delay (float | None): If not None, apply delay to all signals.
 
         Returns:
             signal (np.array): Sampled signals
@@ -276,26 +323,50 @@ class ChirpSignal(BroadSignal):
         super().__init__(f_min, f_max, fs, rng=rng)
 
     def gen(
-        self, n, nsamples, amp=None, min_length_ratio=0.1, no_overlap=False
+        self,
+        n,
+        nsamples,
+        amp=None,
+        use_cache=False,
+        min_length_ratio=0.1,
+        no_overlap=False,
+        delay=None,
     ) -> npt.NDArray[np.complex128]:
         amp = self._get_amp(amp, n)
-        if no_overlap:
-            fre_ranges = self._generate_non_overlapping_bands(
-                n, min_length_ratio
-            )
+
+        if use_cache and not self._cache == {}:
+            fre_ranges = self._cache["fre_ranges"]
+            phase = self._cache["phase"]
+            assert fre_ranges.shape == (n, 2) and phase.shape == (
+                n,
+                1,
+            ), "Cache shape mismatch"
         else:
-            fre_ranges = self._gen_fre_bands(n, min_length_ratio)
+            if no_overlap:
+                fre_ranges = self._generate_non_overlapping_bands(
+                    n, min_length_ratio
+                )
+            else:
+                fre_ranges = self._gen_fre_bands(n, min_length_ratio)
+            phase = self._rng.uniform(0, 2 * np.pi, size=(n, 1))
+            self._set_cache("fre_ranges", fre_ranges)
+            self._set_cache("phase", phase)
 
         t = np.arange(nsamples) * 1 / self._fs
         f0 = fre_ranges[:, 0]
         k = (fre_ranges[:, 1] - fre_ranges[:, 0]) / t[-1]
+
+        if delay is not None:
+            if isinstance(delay, (int, float)):
+                delay = np.ones(n) * delay
+            t = t + (delay.reshape(-1, 1) / self._fs)
 
         signal = np.exp(
             1j
             * 2
             * np.pi
             * (f0.reshape(-1, 1) * t + 0.5 * k.reshape(-1, 1) * t**2)
-        ) * np.exp(1j * self._rng.uniform(0, 2 * np.pi, size=(n, 1)))  # phase
+        ) * np.exp(1j * phase)
 
         signal = amp @ signal
 
