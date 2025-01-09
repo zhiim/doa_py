@@ -134,6 +134,8 @@ def cssm(
     angle_grids,
     pre_estimate,
     fre_ref=None,
+    f_min=None,
+    f_max=None,
     unit="deg",
 ):
     """Coherent Signal Subspace Method (CSSM) for wideband DOA estimation.
@@ -148,6 +150,8 @@ def cssm(
         pre_estimate: pre-estimated angles
         fre_ref: reference frequency. If it's not provided the frequency point
             with the maximum power will be used.
+        f_min : Minimum frequency of interest. Defaults to None.
+        f_max : Maximum frequency of interest. Defaults to None.
         unit : Unit of angle, 'rad' for radians, 'deg' for degrees. Defaults to
             'deg'.
 
@@ -162,8 +166,18 @@ def cssm(
     pre_estimate = pre_estimate.reshape(1, -1)
 
     # Divide the received signal into multiple frequency points
-    signal_fre_bins = np.fft.fft(received_data, axis=1)
-    fre_bins = np.fft.fftfreq(num_snapshots, 1 / fs)
+    delta_f = fs / num_snapshots
+    # there is a little trick to use as wider frequency range as possible
+    idx_f_min = max(int(f_min / delta_f) - 1, 0) if f_min is not None else 0
+    idx_f_max = (
+        min(int(f_max / delta_f) + 1, num_snapshots // 2)
+        if f_max is not None
+        else num_snapshots // 2
+    )
+    signal_fre_bins = np.fft.fft(received_data, axis=1)[
+        :, idx_f_min : idx_f_max + 1
+    ]
+    fre_bins = np.fft.fftfreq(num_snapshots, 1 / fs)[idx_f_min : idx_f_max + 1]
 
     if fre_ref is None:
         # Find the frequency point with the maximum power
