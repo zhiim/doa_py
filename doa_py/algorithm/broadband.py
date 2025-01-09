@@ -11,7 +11,16 @@ C = 3e8
 
 
 def imusic(
-    received_data, num_signal, array, fs, angle_grids, num_groups, unit="deg"
+    received_data,
+    num_signal,
+    array,
+    fs,
+    angle_grids,
+    num_groups,
+    f_min=None,
+    f_max=None,
+    n_fft_min=128,
+    unit="deg",
 ):
     """Incoherent MUSIC estimator for wideband DOA estimation.
 
@@ -24,6 +33,9 @@ def imusic(
             be a numpy array.
         num_groups: Divide sampling points into serveral groups, and do FFT
             separately in each group
+        f_min : Minimum frequency of interest. Defaults to None.
+        f_max : Maximum frequency of interest. Defaults to None.
+        n_fft_min: minimum number of FFT points
         unit : Unit of angle, 'rad' for radians, 'deg' for degrees. Defaults to
             'deg'.
 
@@ -34,7 +46,7 @@ def imusic(
         https://doi.org/10.1109/TASSP.1984.1164400.
     """
     signal_fre_bins, fre_bins = divide_into_fre_bins(
-        received_data, num_groups, fs
+        received_data, num_groups, fs, f_min, f_max, n_fft_min
     )
 
     # MUSIC algorithm in every frequency point
@@ -55,7 +67,16 @@ def imusic(
 
 
 def norm_music(
-    received_data, num_signal, array, fs, angle_grids, num_groups, unit="deg"
+    received_data,
+    num_signal,
+    array,
+    fs,
+    angle_grids,
+    num_groups,
+    f_min=None,
+    f_max=None,
+    n_fft_min=128,
+    unit="deg",
 ):
     """Normalized incoherent MUSIC estimator for wideband DOA estimation.
 
@@ -68,6 +89,9 @@ def norm_music(
             be a numpy array.
         num_groups: Divide sampling points into serveral groups, and do FFT
             separately in each group
+        f_min : Minimum frequency of interest. Defaults to None.
+        f_max : Maximum frequency of interest. Defaults to None.
+        n_fft_min: minimum number of FFT points
         unit : Unit of angle, 'rad' for radians, 'deg' for degrees. Defaults to
             'deg'.
 
@@ -78,7 +102,7 @@ def norm_music(
         (May 2014): 581–85. https://doi.org/10.1109/LSP.2014.2311164.
     """
     signal_fre_bins, fre_bins = divide_into_fre_bins(
-        received_data, num_groups, fs
+        received_data, num_groups, fs, f_min, f_max, n_fft_min
     )
 
     # MUSIC algorithm in every frequency point
@@ -179,9 +203,12 @@ def tops(
     num_signal,
     array,
     fs,
-    num_groups,
     angle_grids,
+    num_groups,
     fre_ref=None,
+    f_min=None,
+    f_max=None,
+    n_fft_min=128,
     unit="deg",
 ):
     """Test of orthogonality of projected subspaces (TOPS) method for wideband
@@ -192,11 +219,14 @@ def tops(
         num_signal: Number of signals.
         array : Instance of array class
         fs: Sampling frequency.
+        angle_grids: Grid points of spatial spectrum, should be a numpy array.
         num_groups: Number of groups for FFT, each group performs an
             independent FFT.
-        angle_grids: Grid points of spatial spectrum, should be a numpy array.
         fre_ref: reference frequency. If it's not provided the frequency point
             with the maximum power will be used.
+        f_min : Minimum frequency of interest. Defaults to None.
+        f_max : Maximum frequency of interest. Defaults to None.
+        n_fft_min: minimum number of FFT points
         unit: Unit of angle measurement, 'rad' for radians, 'deg' for degrees.
             Defaults to 'deg'.
 
@@ -208,7 +238,7 @@ def tops(
     num_antennas = received_data.shape[0]
 
     signal_fre_bins, fre_bins = divide_into_fre_bins(
-        received_data, num_groups, fs
+        received_data, num_groups, fs, f_min, f_max, n_fft_min
     )
 
     if fre_ref is None:

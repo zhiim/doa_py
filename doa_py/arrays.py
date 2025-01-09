@@ -96,6 +96,7 @@ class Array(ABC):
         amp=None,
         unit="deg",
         use_cache=False,
+        calc_method: Literal["delay", "fft"] = "delay",
         **kwargs,
     ):
         """Generate array received signal based on array signal model
@@ -117,8 +118,9 @@ class Array(ABC):
                 `deg` represents degree. Defaults to 'deg'.
             use_cache (bool): If True, use cache to generate identical signals
                 (noise is random). Default to `False`.
-            **kwargs: Additional parameters for generating broadband signal,
-                check `gen` method of `BroadSignal`.
+            calc_method (str): Only used when generate broadband signal.
+                Generate broadband signal in frequency domain, or time domain
+                using delay. Defaults to `delay`.
         """
         # Convert the angle from degree to radians
         angle_incidence = self._unify_unit(angle_incidence, unit)
@@ -131,6 +133,7 @@ class Array(ABC):
                 angle_incidence=angle_incidence,
                 amp=amp,
                 use_cache=use_cache,
+                calc_method=calc_method,
                 **kwargs,
             )
         if isinstance(signal, NarrowSignal):
@@ -186,7 +189,7 @@ class Array(ABC):
         angle_incidence,
         amp,
         use_cache=False,
-        calc_method: Literal["fft", "delay"] = "fft",
+        calc_method: Literal["delay", "fft"] = "delay",
         **kwargs,
     ):
         assert calc_method in ["fft", "delay"], "Invalid calculation method"
@@ -283,24 +286,35 @@ class Array(ABC):
         else:
             num_signal = angle_incidence.shape[1]
 
-        # calculate time delay
+        if np.squeeze(angle_incidence).ndim == 1 or angle_incidence.size == 1:
+            angle_incidence = np.vstack(
+                (angle_incidence.reshape(1, -1), np.zeros(angle_incidence.size))
+            )
+
         angle_incidence = np.reshape(angle_incidence, (2, -1))
+
+        # calculate time delay
         cos_cos = np.cos(angle_incidence[0]) * np.cos(angle_incidence[1])
         sin_cos = np.sin(angle_incidence[0]) * np.cos(angle_incidence[1])
         sin_ = np.sin(angle_incidence[1])
-        time_delay = (
+        time_delay = -(
             1 / C * self.array_position @ np.vstack((cos_cos, sin_cos, sin_))
         )
 
         received = np.zeros((self.num_antennas, nsamples), dtype=np.complex128)
 
+        # clear cache if not use cache
+        if not use_cache:
+            signal.clear_cache()
+
+        # must use cache as the same signal is received by different antennas
         for i in range(self.num_antennas):
             received[i, :] = np.sum(
                 signal.gen(
                     n=num_signal,
                     nsamples=nsamples,
                     amp=amp,
-                    use_cache=use_cache,
+                    use_cache=True,
                     delay=time_delay[i, :],
                     **kwargs,
                 ),

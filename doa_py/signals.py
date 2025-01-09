@@ -41,6 +41,9 @@ class Signal(ABC):
         """
         self._cache[key] = value
 
+    def clear_cache(self):
+        self._cache = {}
+
     def _get_amp(
         self,
         amp: Optional[ListLike],
@@ -85,7 +88,7 @@ class Signal(ABC):
         Returns:
             signal (np.array): Sampled signals
         """
-        raise NotImplementedError
+        pass
 
 
 class NarrowSignal(Signal):
@@ -116,7 +119,7 @@ class NarrowSignal(Signal):
         amp: Optional[ListLike] = None,
         use_cache: bool = False,
     ) -> npt.NDArray[np.complex128]:
-        raise NotImplementedError
+        pass
 
 
 class ComplexStochasticSignal(NarrowSignal):
@@ -213,17 +216,31 @@ class BroadSignal(Signal):
         f_min: Union[int, float],
         f_max: Union[int, float],
         fs: Union[int, float],
+        min_length_ratio: float = 0.1,
+        no_overlap: bool = False,
         rng: Optional[np.random.Generator] = None,
     ):
         self._f_min = f_min
         self._f_max = f_max
         self._fs = fs
+        self._min_length_ratio = min_length_ratio
+        self._no_overlap = no_overlap
 
         super().__init__(rng=rng)
 
     @property
     def fs(self):
         return self._fs
+
+    @property
+    @abstractmethod
+    def f_min(self):
+        pass
+
+    @property
+    @abstractmethod
+    def f_max(self):
+        pass
 
     @abstractmethod
     def gen(
@@ -232,10 +249,8 @@ class BroadSignal(Signal):
         nsamples: int,
         amp: Optional[ListLike] = None,
         use_cache: bool = False,
-        min_length_ratio: float = 0.1,
-        no_overlap: bool = False,
         delay: Optional[Union[npt.NDArray, int, float]] = None,
-    ):
+    ) -> npt.NDArray[np.complex128]:
         """Generate sampled signals
 
         Args:
@@ -246,30 +261,30 @@ class BroadSignal(Signal):
                 By default it will generate equal amplitude signal.
             use_cache (bool): If True, use cache to generate identical signals.
                 Default to `False`.
-            min_length_ratio (float): Minimum length ratio of the frequency
-                range in (f_max - f_min)
-            no_overlap (bool): If True, generate signals with non-overlapping
-                subbands
             delay (float | None): If not None, apply delay to all signals.
 
         Returns:
             signal (np.array): Sampled signals
         """
-        raise NotImplementedError
+        pass
 
-    def _gen_fre_bands(self, n: int, min_length_ratio: float = 0.1):
+    def _gen_fre_bands(self, n: int):
         """Generate frequency ranges for each boardband signal
 
         Args:
             n (int): Number of signals
-            min_length_ratio (float): Minimum length ratio of the frequency
-                range in (f_max - f_min)
 
         Returns:
             ranges (np.array): Frequency ranges for each signal with shape
                 (n, 2)
         """
-        min_length = (self._f_max - self._f_min) * min_length_ratio
+        if self._no_overlap:
+            return self._gen_fre_bands_no_overlapping(n)
+        return self._gen_fre_bands_overlapping(n)
+
+    def _gen_fre_bands_overlapping(self, n: int):
+        """Generate frequency bands may overlapping."""
+        min_length = (self._f_max - self._f_min) * self._min_length_ratio
         bands = np.zeros((n, 2))
         for i in range(n):
             length = self._rng.uniform(min_length, self._f_max - self._f_min)
@@ -277,22 +292,10 @@ class BroadSignal(Signal):
             bands[i] = [start, start + length]
         return bands
 
-    def _generate_non_overlapping_bands(
-        self, n: int, min_length_ratio: float = 0.1
-    ):
-        """Generate n non-overlapping frequency bands within a specified range.
-
-        Args:
-            n (int): Number of non-overlapping bands to generate.
-            min_length_ratio (float): Minimum length of each band as a ratio of
-               the maximum possible length.
-
-        Returns:
-            np.ndarray: An array of shape (n, 2) where each row represents a
-               frequency band [start, end].
-        """
+    def _gen_fre_bands_no_overlapping(self, n: int):
+        """Generate non-overlapping frequency bands."""
         max_length = (self._f_max - self._f_min) // n
-        min_length = max_length * min_length_ratio
+        min_length = max_length * self._min_length_ratio
 
         bands = np.zeros((n, 2))
 
@@ -310,17 +313,43 @@ class BroadSignal(Signal):
 
 
 class ChirpSignal(BroadSignal):
-    def __init__(self, f_min, f_max, fs, rng=None):
+    def __init__(
+        self,
+        f_min,
+        f_max,
+        fs,
+        min_length_ratio: float = 0.1,
+        no_overlap: bool = False,
+        rng=None,
+    ):
         """Chirp signal
 
         Args:
             f_min (float): Minimum frequency
             f_max (float): Maximum frequency
             fs (int | float): Sampling frequency
+            min_length_ratio (float): Minimum length ratio of the frequency
+                band in (f_max - f_min)
+            no_overlap (bool): If True, generate signals with non-overlapping
+                bands
             rng (np.random.Generator): Random generator used to generate random
                 numbers
         """
-        super().__init__(f_min, f_max, fs, rng=rng)
+        super().__init__(
+            f_min, f_max, fs, min_length_ratio, no_overlap, rng=rng
+        )
+
+    @property
+    def f_min(self):
+        if "fre_ranges" not in self._cache:
+            raise ValueError("fre_ranges not in cache")
+        return np.min(self._cache["fre_ranges"][:, 0])
+
+    @property
+    def f_max(self):
+        if "fre_ranges" not in self._cache:
+            raise ValueError("fre_ranges not in cache")
+        return np.max(self._cache["fre_ranges"][:, 1])
 
     def gen(
         self,
@@ -328,12 +357,11 @@ class ChirpSignal(BroadSignal):
         nsamples,
         amp=None,
         use_cache=False,
-        min_length_ratio=0.1,
-        no_overlap=False,
         delay=None,
     ) -> npt.NDArray[np.complex128]:
         amp = self._get_amp(amp, n)
 
+        # use cache
         if use_cache and not self._cache == {}:
             fre_ranges = self._cache["fre_ranges"]
             phase = self._cache["phase"]
@@ -341,25 +369,24 @@ class ChirpSignal(BroadSignal):
                 n,
                 1,
             ), "Cache shape mismatch"
+        # generate new and write to cache
         else:
-            if no_overlap:
-                fre_ranges = self._generate_non_overlapping_bands(
-                    n, min_length_ratio
-                )
-            else:
-                fre_ranges = self._gen_fre_bands(n, min_length_ratio)
+            fre_ranges = self._gen_fre_bands(n)
             phase = self._rng.uniform(0, 2 * np.pi, size=(n, 1))
             self._set_cache("fre_ranges", fre_ranges)
             self._set_cache("phase", phase)
 
         t = np.arange(nsamples) * 1 / self._fs
+
+        # start freq
         f0 = fre_ranges[:, 0]
+        # freq move to f1 in t
         k = (fre_ranges[:, 1] - fre_ranges[:, 0]) / t[-1]
 
         if delay is not None:
             if isinstance(delay, (int, float)):
                 delay = np.ones(n) * delay
-            t = t + (delay.reshape(-1, 1) / self._fs)
+            t = t + delay.reshape(-1, 1)
 
         signal = np.exp(
             1j
@@ -379,8 +406,10 @@ class MultiFreqSignal(BroadSignal):
         f_min: Union[int, float],
         f_max: Union[int, float],
         fs: Union[int, float],
-        ncarriers: int = 100,
+        min_length_ratio: float = 0.1,
+        no_overlap: bool = False,
         rng: Optional[np.random.Generator] = None,
+        ncarriers: int = 100,
     ):
         """Broadband signal consisting of mulitple narrowband signals modulated
         on different carrier frequencies.
@@ -389,30 +418,87 @@ class MultiFreqSignal(BroadSignal):
             f_min (float): Minimum frequency
             f_max (float): Maximum frequency
             fs (int | float): Sampling frequency
-            ncarriers (int): Number of carrier frequencies in each broadband
+            min_length_ratio (float): Minimum length ratio of the frequency
+                band in (f_max - f_min)
+            no_overlap (bool): If True, generate signals with non-overlapping
+                bands
             rng (np.random.Generator): Random generator used to generate random
                 numbers
+            ncarriers (int): Number of carrier frequencies in each broadband
         """
-        super().__init__(f_min, f_max, fs, rng=rng)
+        super().__init__(
+            f_min, f_max, fs, min_length_ratio, no_overlap, rng=rng
+        )
+
         self._ncarriers = ncarriers
 
+    @property
+    def f_min(self):
+        if "fres" not in self._cache:
+            raise ValueError("fres not in cache")
+        return np.min(self._cache["fres"])
+
+    @property
+    def f_max(self):
+        if "fres" not in self._cache:
+            raise ValueError("fres not in cache")
+        return np.max(self._cache["fres"])
+
     def gen(
-        self, n, nsamples, amp=None, min_length_ratio=0.1, no_overlap=False
+        self,
+        n,
+        nsamples,
+        amp=None,
+        use_cache=False,
+        delay=None,
     ) -> npt.NDArray[np.complex128]:
         amp = self._get_amp(amp, n)
-        if no_overlap:
-            fre_ranges = self._generate_non_overlapping_bands(
-                n, min_length_ratio
-            )
-        else:
-            fre_ranges = self._gen_fre_bands(n, min_length_ratio)
+        """Generate sampled signals
 
-        # generate random carrier frequencies
-        fres = self._rng.uniform(
-            fre_ranges[:, 0].reshape(-1, 1),
-            fre_ranges[:, 1].reshape(-1, 1),
-            size=(n, self._ncarriers),
-        )
+        Args:
+            n (int): Number of signals
+            nsamples (int): Number of snapshots
+            amp (np.array): Amplitude of the signals (1D array of size n), used
+                to define different amplitudes for different signals.
+                By default it will generate equal amplitude signal.
+            use_cache (bool): If True, use cache to generate identical signals.
+                Default to `False`.
+            delay (float | None): If not None, apply delay to all signals.
+
+        Returns:
+            signal (np.array): Sampled signals
+        """
+
+        if use_cache and not self._cache == {}:
+            fres = self._cache["fres"]
+            phase = self._cache["phase"]
+            assert fres.shape == (n, self._ncarriers) and phase.shape == (
+                n,
+                self._ncarriers,
+                1,
+            ), "Cache shape mismatch"
+        else:
+            fre_ranges = self._gen_fre_bands(n)
+            # generate random carrier frequencies
+            fres = self._rng.uniform(
+                fre_ranges[:, 0].reshape(-1, 1),
+                fre_ranges[:, 1].reshape(-1, 1),
+                size=(n, self._ncarriers),
+            )
+            phase = self._rng.uniform(
+                0, 2 * np.pi, size=(n, self._ncarriers, 1)
+            )
+            self._set_cache("fres", fres)
+            self._set_cache("phase", phase)
+
+        t = np.arange(nsamples) * (1 / self._fs)
+
+        if delay is not None:
+            if isinstance(delay, (int, float)):
+                delay = np.ones(n) * delay
+            t = t + delay.reshape(-1, 1)  # t is broadcasted to (n, nsamples)
+            # let t able to be broadcasted where calculating `signal`
+            t = np.expand_dims(t, axis=1)
 
         signal = np.sum(
             np.exp(
@@ -420,16 +506,13 @@ class MultiFreqSignal(BroadSignal):
                 * 2
                 * np.pi
                 * np.repeat(np.expand_dims(fres, axis=2), nsamples, axis=2)
-                / self._fs
-                * np.arange(nsamples)
+                * t
             )
-            * np.exp(
-                1j
-                * self._rng.uniform(0, 2 * np.pi, size=(n, self._ncarriers, 1))
-            ),
+            * np.exp(1j * phase),
             axis=1,
         )
 
+        # norm signal power to 1
         signal = signal / np.sqrt(np.mean(np.abs(signal) ** 2))
 
         signal = amp @ signal
@@ -443,8 +526,11 @@ class MixedSignal(BroadSignal):
         f_min: Union[int, float],
         f_max: Union[int, float],
         fs: Union[int, float],
+        min_length_ratio: float = 0.1,
+        no_overlap: bool = False,
         rng: Optional[np.random.Generator] = None,
         base: Literal["chirp", "multifreq"] = "chirp",
+        ncarriers: int = 100,
     ):
         """Narrorband and broadband mixed signal
 
@@ -452,9 +538,15 @@ class MixedSignal(BroadSignal):
             f_min (float): Minimum frequency
             f_max (float): Maximum frequency
             fs (int | float): Sampling frequency
+            min_length_ratio (float): Minimum length ratio of the frequency
+                band in (f_max - f_min)
+            no_overlap (bool): If True, generate signals with non-overlapping
+                bands
             rng (np.random.Generator): Random generator used to generate random
                 numbers
             base (str): Type of base signal, either 'chirp' or 'multifreq'
+            ncarriers (int): Only for `multifreq` base. Number of carrier
+                frequencies in each broadband
 
         Raises:
             ValueError: If base is not 'chirp' or 'multifreq'
@@ -462,21 +554,37 @@ class MixedSignal(BroadSignal):
         if base not in ["chirp", "multifreq"]:
             raise ValueError("base must be either 'chirp' or 'multifreq'")
         if base == "chirp":
-            self._base = ChirpSignal(f_min=f_min, f_max=f_max, fs=fs, rng=rng)
+            self._base = ChirpSignal(
+                f_min, f_max, fs, min_length_ratio, no_overlap, rng
+            )
         elif base == "multifreq":
             self._base = MultiFreqSignal(
-                f_min=f_min, f_max=f_max, fs=fs, rng=rng
+                f_min, f_max, fs, min_length_ratio, no_overlap, rng, ncarriers
             )
 
-        super().__init__(f_min, f_max, fs, rng)
+        super().__init__(
+            f_min, f_max, fs, min_length_ratio, no_overlap, rng=rng
+        )
+
+    def clear_cache(self):
+        super().clear_cache()
+        self._base.clear_cache()
+
+    @property
+    def f_min(self):
+        return np.min([np.min(self._cache["narrow_freqs"]), self._base.f_min])
+
+    @property
+    def f_max(self):
+        return np.max([np.max(self._cache["narrow_freqs"]), self._base.f_max])
 
     def gen(
         self,
         n: int,
         nsamples: int,
         amp: Optional[ListLike] = None,
-        min_length_ratio: float = 0.1,
-        no_overlap: bool = False,
+        use_cache=False,
+        delay: Optional[Union[npt.NDArray, int, float]] = None,
         m: Optional[int] = None,
         narrow_idx: Union[npt.NDArray[np.int_], list[int], None] = None,
     ):
@@ -488,10 +596,9 @@ class MixedSignal(BroadSignal):
             amp (np.array): Amplitude of the signals (1D array of size n), used
                 to define different amplitudes for different signals.
                 By default it will generate equal amplitude signal.
-            min_length_ratio (float): Minimum length ratio of the frequency
-                range in (f_max - f_min)
-            no_overlap (bool): If True, generate signals with non-overlapping
-                subbands
+            use_cache (bool): If True, use cache to generate identical signals.
+                Default to `False`.
+            delay (float | None): If not None, apply delay to all signals.
             m (int): Number of narrowband signals inside `n`. If set to `None`,
                 it will use a random int smaller than n
             narrow_idx (array): index of where narrowband signal is located in n
@@ -500,41 +607,62 @@ class MixedSignal(BroadSignal):
         if m is None:
             m = self._rng.integers(1, n)
         else:
-            if m < n:
+            if m >= n:
                 raise ValueError(
                     "Number of narrowband signals must be less than n"
                 )
 
         amp = self._get_amp(amp, n)
-        if narrow_idx is None:
-            narrow_idx = self._rng.choice(n, m, replace=False)
+
+        if use_cache and not self._cache == {}:
+            narrow_freqs = self._cache["narrow_freqs"]
+            phase = self._cache["phase"]
+            narrow_idx = self._cache["narrow_idx"]
+            assert narrow_freqs.shape == (m, 1), "Cache shape mismatch"
+            assert phase.shape == (m, 1), "Cache shape mismatch"
+            assert isinstance(narrow_idx, np.ndarray)
         else:
-            if len(narrow_idx) == m:
-                raise ValueError("narrow_idx must have m elements")
+            narrow_freqs = self._rng.uniform(
+                self._f_min, self._f_max, size=m
+            ).reshape(-1, 1)
+            phase = self._rng.uniform(0, 2 * np.pi, size=(m, 1))
+            if narrow_idx is None:
+                narrow_idx = self._rng.choice(n, m, replace=False)
+            narrow_idx = np.array(narrow_idx)
+            assert len(narrow_idx) == m, "narrow_idx length mismatch"
+            self._set_cache("narrow_freqs", narrow_freqs)
+            self._set_cache("phase", phase)
+            self._set_cache("narrow_idx", narrow_idx)
+
+        if delay is not None:
+            if isinstance(delay, (int, float)):
+                delay = np.ones(n) * delay
+        else:
+            delay = np.zeros(n)
+
+        broad_idx = ~np.isin(np.arange(n), narrow_idx)
+
+        # generate narrowband signals
+        t = np.arange(nsamples) * (1 / self._fs)
+        t = t + delay.reshape(-1, 1)[narrow_idx]
+
+        narrow_s = (
+            np.exp(1j * 2 * np.pi * narrow_freqs * t)  # sine wave
+            * np.exp(1j * phase)  # phase
+        )
 
         # generate broadband signals
         broad_s = self._base.gen(
             n=n - m,
             nsamples=nsamples,
-            min_length_ratio=min_length_ratio,
-            no_overlap=no_overlap,
-        )
-
-        # generate narrowband signals
-        narrow_freqs = self._rng.uniform(
-            self._f_min, self._f_max, size=m
-        ).reshape(-1, 1)
-        narrow_s = (
-            np.exp(
-                1j * 2 * np.pi * narrow_freqs / self._fs * np.arange(nsamples)
-            )  # sine wave
-            * np.exp(1j * self._rng.uniform(0, 2 * np.pi, size=(m, 1)))  # phase
+            use_cache=use_cache,
+            delay=delay.reshape(-1, 1)[broad_idx],
         )
 
         # combine narrowband and broadband signals
         signal = np.zeros((n, nsamples), dtype=np.complex128)
         signal[narrow_idx] = narrow_s
-        signal[~np.isin(np.arange(n), narrow_idx)] = broad_s
+        signal[broad_idx] = broad_s
 
         signal = amp @ signal
 

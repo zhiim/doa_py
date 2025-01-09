@@ -17,7 +17,9 @@ def get_signal_space(corvariance_matrix, num_signal):
     return signal_space
 
 
-def divide_into_fre_bins(received_data, num_groups, fs):
+def divide_into_fre_bins(
+    received_data, num_groups, fs, f_min=None, f_max=None, n_fft_min=128
+):
     """Do FFT on array signal of each channel, and divide signal into different
     frequency points.
 
@@ -25,6 +27,9 @@ def divide_into_fre_bins(received_data, num_groups, fs):
         received_data : array received signal
         num_groups : how many groups divide snapshots into
         fs : sampling frequency
+        f_min: minimum frequency of interest
+        f_max: maximum frequency of interest
+        min_n_fft: minimum number of FFT points
 
     Returns:
         `signal_fre_bins`: a (m, n, l) tensor, in which m equals to number of
@@ -35,13 +40,24 @@ def divide_into_fre_bins(received_data, num_groups, fs):
 
     # number of sampling points in each group
     n_each_group = num_snapshots // num_groups
-    if n_each_group < 128:
-        n_fft = 128  # zero padding when sampling points is not enough
+    if n_each_group < n_fft_min:
+        n_fft = n_fft_min  # zero padding when sampling points is not enough
     else:
         n_fft = n_each_group
 
+    delta_f = fs / n_fft
+    # there is a little trick to use as wider frequency range as possible
+    idx_f_min = max(int(f_min / delta_f) - 1, 0) if f_min is not None else 0
+    idx_f_max = (
+        min(int(f_max / delta_f) + 1, n_fft // 2)
+        if f_max is not None
+        else n_fft // 2
+    )
+    idx_range = idx_f_max - idx_f_min + 1
+
     signal_fre_bins = np.zeros(
-        (received_data.shape[0], n_fft, num_groups), dtype=np.complex128
+        (received_data.shape[0], idx_range, num_groups),
+        dtype=np.complex128,
     )
     # do FTT separately in each group
     for group_i in range(num_groups):
@@ -51,7 +67,7 @@ def divide_into_fre_bins(received_data, num_groups, fs):
             ],
             n=n_fft,
             axis=1,
-        )
-    fre_bins = np.fft.fftfreq(n_fft, 1 / fs)
+        )[:, idx_f_min : idx_f_max + 1]
+    fre_bins = np.fft.fftfreq(n_fft, 1 / fs)[idx_f_min : idx_f_max + 1]
 
     return signal_fre_bins, fre_bins
