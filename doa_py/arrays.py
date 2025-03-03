@@ -3,6 +3,7 @@ from abc import ABC
 from typing import Literal
 
 import numpy as np
+from scipy.linalg import toeplitz
 from typing_extensions import override
 
 from .signals import BroadSignal, NarrowSignal, Signal
@@ -112,6 +113,13 @@ class Array(ABC):
         )
         steering_vector = np.exp(-1j * 2 * np.pi * fre * time_delay)
 
+        # applying mutual coupling effects
+        if (
+            hasattr(self, "_coupling_matrix")
+            and self._coupling_matrix is not None
+        ):
+            steering_vector = self._coupling_matrix @ steering_vector
+
         return steering_vector
 
     def add_position_error(self, error_std, error_type="gaussian"):
@@ -120,6 +128,16 @@ class Array(ABC):
         Args:
             error_std (float): Standard deviation of the position error
             error_type (str): Type of the error, `gaussian` or `uniform`
+        """
+        warnings.warn("This method is not implemented", UserWarning)
+
+    def add_mutual_coupling(self, coupling_matrix=None):
+        """Add mutual coupling effects to the array
+
+        Args:
+            coupling_matrix (np.ndarray): A square matrix representing mutual
+                coupling between array elements. Should be of size
+                (num_antennas, num_antennas).
         """
         warnings.warn("This method is not implemented", UserWarning)
 
@@ -405,6 +423,24 @@ class UniformLinearArray(Array):
             raise ValueError("Invalid error type")
 
         self._element_position[:, 1] = self._ideal_position[:, 1] + error
+
+    @override
+    def add_mutual_coupling(self, coupling_matrix=None):
+        if coupling_matrix is None:
+            # default coupling matrix
+            coefficient = np.zeros(self.num_antennas).astype(np.complex128)
+            coefficient[0] = 1
+            coefficient[1] = 0.65 * np.exp(-1j * np.pi / 7)
+            coefficient[2] = 0.25 * np.exp(-1j * np.pi / 10)
+            coupling_matrix = toeplitz(coefficient)
+
+        if coupling_matrix.shape != (self.num_antennas, self.num_antennas):
+            raise ValueError(
+                f"Coupling matrix shape {coupling_matrix.shape} does not match "
+                f"the number of antennas {self.num_antennas}"
+            )
+
+        self._coupling_matrix = coupling_matrix
 
 
 class UniformCircularArray(Array):
