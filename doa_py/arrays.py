@@ -1,7 +1,9 @@
+import warnings
 from abc import ABC
 from typing import Literal
 
 import numpy as np
+from typing_extensions import override
 
 from .signals import BroadSignal, NarrowSignal, Signal
 
@@ -22,6 +24,8 @@ class Array(ABC):
             (element_position_x, element_position_y, element_position_z)
         ).T
 
+        self._ideal_position = self._element_position.copy()
+
         if rng is None:
             self._rng = np.random.default_rng()
         else:
@@ -33,7 +37,7 @@ class Array(ABC):
 
     @property
     def array_position(self):
-        return self._element_position
+        return self._ideal_position
 
     def set_rng(self, rng):
         """Setting random number generator
@@ -80,12 +84,44 @@ class Array(ABC):
         sin_cos = np.sin(angle_incidence[0]) * np.cos(angle_incidence[1])
         sin_ = np.sin(angle_incidence[1])
 
+        # only the ideal position is known by algorithms
         time_delay = (
-            1 / C * self.array_position @ np.vstack((cos_cos, sin_cos, sin_))
+            1 / C * self._ideal_position @ np.vstack((cos_cos, sin_cos, sin_))
         )
         steering_vector = np.exp(-1j * 2 * np.pi * fre * time_delay)
 
         return steering_vector
+
+    def _steering_vector_with_error(self, fre, angle_incidence, unit="deg"):
+        if np.squeeze(angle_incidence).ndim == 1 or angle_incidence.size == 1:
+            angle_incidence = np.vstack(
+                (angle_incidence.reshape(1, -1), np.zeros(angle_incidence.size))
+            )
+
+        angle_incidence = self._unify_unit(
+            np.reshape(angle_incidence, (2, -1)), unit
+        )
+
+        cos_cos = np.cos(angle_incidence[0]) * np.cos(angle_incidence[1])
+        sin_cos = np.sin(angle_incidence[0]) * np.cos(angle_incidence[1])
+        sin_ = np.sin(angle_incidence[1])
+
+        # used to generate received signal using the actual position
+        time_delay = (
+            1 / C * self._element_position @ np.vstack((cos_cos, sin_cos, sin_))
+        )
+        steering_vector = np.exp(-1j * 2 * np.pi * fre * time_delay)
+
+        return steering_vector
+
+    def add_position_error(self, error_std, error_type="gaussian"):
+        """Add position error to the array
+
+        Args:
+            error_std (float): Standard deviation of the position error
+            error_type (str): Type of the error, `gaussian` or `uniform`
+        """
+        warnings.warn("This method is not implemented", UserWarning)
 
     def received_signal(
         self,
@@ -166,7 +202,7 @@ class Array(ABC):
         else:
             num_signal = angle_incidence.shape[1]
 
-        manifold_matrix = self.steering_vector(
+        manifold_matrix = self._steering_vector_with_error(
             signal.frequency, angle_incidence, unit="rad"
         )
 
@@ -253,7 +289,7 @@ class Array(ABC):
         )
         fre_points = np.fft.fftfreq(nsamples, 1 / signal.fs)
         for i, fre in enumerate(fre_points):
-            manifold_fre = self.steering_vector(
+            manifold_fre = self._steering_vector_with_error(
                 fre, angle_incidence, unit="rad"
             )
 
@@ -298,7 +334,7 @@ class Array(ABC):
         sin_cos = np.sin(angle_incidence[0]) * np.cos(angle_incidence[1])
         sin_ = np.sin(angle_incidence[1])
         time_delay = -(
-            1 / C * self.array_position @ np.vstack((cos_cos, sin_cos, sin_))
+            1 / C * self._element_position @ np.vstack((cos_cos, sin_cos, sin_))
         )
 
         received = np.zeros((self.num_antennas, nsamples), dtype=np.complex128)
@@ -355,6 +391,20 @@ class UniformLinearArray(Array):
         super().__init__(
             element_position_x, element_position_y, element_position_z, rng
         )
+
+    @override
+    def add_position_error(self, error_std=0.1, error_type="gaussian"):
+        dd = self._element_position[1, 1] - self._element_position[0, 1]
+        # the error is added to the distance between adjacent antennas
+        sigma = error_std * dd
+        if error_type == "gaussian":
+            error = self._rng.normal(0, sigma, self.num_antennas)
+        elif error_type == "uniform":
+            error = self._rng.uniform(-sigma, sigma, self.num_antennas)
+        else:
+            raise ValueError("Invalid error type")
+
+        self._element_position[:, 1] = self._ideal_position[:, 1] + error
 
 
 class UniformCircularArray(Array):
