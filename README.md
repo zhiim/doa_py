@@ -1,5 +1,5 @@
-<div align="left">
-  <img src="pics/doa_py.svg" alt="DOA_Py logo" width="20%">
+<div align="center">
+  <img src="pics/doa_py.svg" alt="DOA_Py logo" width="50%">
 </div>
 
 # DOA_Py
@@ -64,23 +64,24 @@ plot_spatial_spectrum(
 ```
 
 You will a get a figure like this:
-![music_spectrum](https://github.com/zhiim/doa_py/blob/master/pics/music_spectrum.svg)
+![music_spectrum](./pics/music_spectrum.svg)
 
-Check [examples](https://github.com/zhiim/doa_py/tree/master/examples) for more examples.
+Check [examples](./examples/) for for more details on how to use it.
+
+You can see more plot results of the algorithm in the [Showcase](#showcase).
 
 ## What's implemented
 
 ### Array Structures
 
-- Uniform Linear Array (ULA)
-- Uniform Rectangular Array (URA, to be implemented)
-- Uniform Circular Array (UCA)
+- Uniform Linear Array (support array position error and mutual coupling error)
+- Uniform Circular Array
 
 ### Signal Models
 
 - **Narrowband**
   - _ComplexStochasticSignal_: The amplitude of signals at each sampling point is a complex random variable.
-  - _RandomFreqSignal_: Signals transmitted by different sources have different intermediate frequencies (IF).
+  - _RandomFreqSignal_: Signals transmitted by different sources have different intermediate frequencies (support coherent mode).
 - **Broadband**
   - _ChirpSignal_: Chirp signals with different chirp bandwidths within the sampling period.
   - _MultiFreqSignal_: Broadband signals formed by the superposition of multiple single-frequency signals within a certain frequency band.
@@ -93,7 +94,7 @@ Check [examples](https://github.com/zhiim/doa_py/tree/master/examples) for more 
   - [x] ESPRIT
   - [x] Root-MUSIC
   - [x] OMP
-  - [x] l1-SVD
+  - [x] $l_1$-SVD
 - DOA estimation for URA
   - [ ] URA-MUSIC
   - [ ] URA-ESPRIT
@@ -101,9 +102,19 @@ Check [examples](https://github.com/zhiim/doa_py/tree/master/examples) for more 
   - [x] UCA-RB-MUSIC
   - [x] UCA-ESPRIT
 - Broadband/Wideband DOA estimation
-  - [x] ISSM
+  - [x] iMUSIC
   - [x] CSSM
   - [x] TOPS
+- Coherent DOA estimation
+  - [x] smoothed-MUSIC
+
+### Showcase
+
+![ESPRIT](./pics/esprit.svg)
+
+![$l_1$-SVD](./pics/l1_svd.svg)
+
+![UCA-RB-MUSIC](./pics/uca_rb_music.svg)
 
 ## License
 

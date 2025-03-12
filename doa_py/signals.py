@@ -164,6 +164,7 @@ class RandomFreqSignal(NarrowSignal):
         self,
         fc: Union[int, float],
         freq_ratio: float = 0.05,
+        coherent: bool = False,
         rng: Optional[np.random.Generator] = None,
     ):
         """Random frequency signal
@@ -171,6 +172,7 @@ class RandomFreqSignal(NarrowSignal):
         Args:
             fc (float): Signal frequency
             freq_ratio (float): Ratio of the maximum frequency deviation from fc
+            coherent (bool): If True, generate coherent signals
             rng (np.random.Generator): Random generator used to generate random
                 numbers
         """
@@ -180,6 +182,8 @@ class RandomFreqSignal(NarrowSignal):
             0 < freq_ratio < 0.1
         ), "This signal must be narrowband: freq_ratio in (0, 0.1)"
         self._freq_ratio = freq_ratio
+
+        self._coherent = coherent
 
     def gen(self, n, nsamples, amp=None, use_cache=False):
         amp = self._get_amp(amp, n)
@@ -193,9 +197,14 @@ class RandomFreqSignal(NarrowSignal):
             ), "Cache shape mismatch"
         else:
             # Generate random phase signal
-            freq = self._rng.uniform(
-                0, self._freq_ratio * self._fc, size=(n, 1)
-            )
+            if self._coherent:
+                freq = self._rng.uniform(
+                    0, self._freq_ratio * self._fc
+                ) * np.ones((n, 1))
+            else:
+                freq = self._rng.uniform(
+                    0, self._freq_ratio * self._fc, size=(n, 1)
+                )
             phase = self._rng.uniform(0, 2 * np.pi, size=(n, 1))
             self._set_cache("freq", freq)
             self._set_cache("phase", phase)

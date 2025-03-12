@@ -71,3 +71,24 @@ def divide_into_fre_bins(
     fre_bins = np.fft.fftfreq(n_fft, 1 / fs)[idx_f_min : idx_f_max + 1]
 
     return signal_fre_bins, fre_bins
+
+
+def forward_backward_smoothing(received_data, subarray_size):
+    num_elements = received_data.shape[0]
+    num_subarrays = num_elements - subarray_size + 1
+    smoothed_data = np.zeros(
+        (subarray_size, subarray_size), dtype=np.complex128
+    )
+
+    # forward smoothing
+    for i in range(num_subarrays):
+        subarray = received_data[i : i + subarray_size, :]
+        smoothed_data += np.cov(subarray)
+
+    # backward smoothing
+    matrix_j = np.fliplr(np.eye(subarray_size))
+    smoothed_data += matrix_j @ smoothed_data.conj() @ matrix_j
+
+    smoothed_data /= 2 * num_subarrays
+
+    return smoothed_data

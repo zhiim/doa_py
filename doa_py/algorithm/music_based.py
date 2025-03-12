@@ -1,6 +1,6 @@
 import numpy as np
 
-from .utils import get_noise_space
+from .utils import forward_backward_smoothing, get_noise_space
 
 C = 3e8
 
@@ -177,3 +177,51 @@ def uca_rb_music(
         spectrum[:, i] = 1 / np.linalg.norm(v, axis=0) ** 2
 
     return spectrum
+
+
+def smoothed_music(
+    received_data,
+    num_signal,
+    array,
+    signal_fre,
+    angle_grids,
+    subarray_size=None,
+    unit="deg",
+):
+    """1D MUSIC with forward-backward smoothing for coherent signal
+
+    Args:
+        received_data : Array received signals
+        num_signal : Number of signals
+        array : Instance of array class
+        signal_fre: Signal frequency
+        angle_grids : Angle grids corresponding to spatial spectrum. It should
+            be a numpy array.
+        subarray_size : Size of subarray for spatial smoothing. Defaults to
+            None.
+        unit : Unit of angle, 'rad' for radians, 'deg' for degrees. Defaults to
+            'deg'.
+    """
+    if subarray_size is None:
+        subarray_size = received_data.shape[0] // 2
+
+    if subarray_size < num_signal + 1:
+        raise ValueError("Subarray size must be greater than number of signals")
+
+    smoothed_data = forward_backward_smoothing(received_data, subarray_size)
+
+    noise_space = get_noise_space(smoothed_data, num_signal)
+
+    # Calculate the manifold matrix when there are incident signal in all
+    # grid points
+    manifold_all_grids = array.steering_vector(
+        signal_fre, angle_grids, unit=unit
+    )[0:subarray_size, :]
+
+    v = noise_space.transpose().conj() @ manifold_all_grids
+
+    # Each column of matrix v corresponds to an incident signal, calculate the
+    # square of the 2-norm for each column
+    spectrum = 1 / np.linalg.norm(v, axis=0) ** 2
+
+    return np.squeeze(spectrum)
