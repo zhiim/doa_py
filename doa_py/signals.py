@@ -1,8 +1,10 @@
+import warnings
 from abc import ABC, abstractmethod
 from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import numpy.typing as npt
+from typing_extensions import override
 
 ListLike = Union[npt.NDArray[np.number], list[int | float | complex]]
 
@@ -89,6 +91,19 @@ class Signal(ABC):
             signal (np.array): Sampled signals
         """
         pass
+
+    def add_multipath(self, num_paths=1):
+        """Add multipath effect to the signal
+
+        Args:
+            num_paths (int): Number of multipath components
+        """
+        self._multipath_enabled = True
+        self._num_paths = num_paths
+
+    def _generate_multipath(self):
+        """Generate multipath components"""
+        warnings.warn("This method is not implemented", UserWarning)
 
 
 class NarrowSignal(Signal):
@@ -216,7 +231,38 @@ class RandomFreqSignal(NarrowSignal):
             @ np.exp(1j * 2 * np.pi * freq / fs * np.arange(nsamples))
             * np.exp(1j * phase)  # phase
         )
+
+        # add multipath effect
+        if hasattr(self, "_multipath_enabled") and self._multipath_enabled:
+            path_signal = self._generate_multipath(signal, self.frequency)
+            signal = np.vstack([signal, path_signal])
+
         return signal
+
+    @override
+    def _generate_multipath(self, signal_data, signal_fre):
+        num_signal = signal_data.shape[0]
+        num_snapshots = signal_data.shape[1]
+
+        # -- add multi path delay and amplitude --------------------------------
+        relative_amplitudes = self._rng.uniform(
+            0.3, 0.9, (num_signal, self._num_paths)
+        )
+        relative_phases = self._rng.uniform(
+            0, 2 * np.pi, (num_signal, self._num_paths)
+        )
+
+        path_signal = np.zeros(
+            (num_signal * self._num_paths, num_snapshots), dtype=np.complex128
+        )
+        for i in range(self._num_paths):
+            path_signal[i * num_signal : (i + 1) * num_signal, :] = (
+                relative_amplitudes[:, i].reshape(-1, 1)
+                * signal_data
+                * np.exp(1j * relative_phases[:, i].reshape(-1, 1))
+            )
+
+        return path_signal
 
 
 class BroadSignal(Signal):

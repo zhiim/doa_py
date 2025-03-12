@@ -220,12 +220,18 @@ class Array(ABC):
         else:
             num_signal = angle_incidence.shape[1]
 
-        manifold_matrix = self._steering_vector_with_error(
-            signal.frequency, angle_incidence, unit="rad"
-        )
-
         incidence_signal = signal.gen(
             n=num_signal, nsamples=nsamples, amp=amp, use_cache=use_cache
+        )
+
+        if hasattr(signal, "_multipath_enabled") and signal._multipath_enabled:
+            angle_incidence = self._get_multi_path_doa(
+                angle_incidence, signal._num_paths
+            )
+            self._doa = angle_incidence
+
+        manifold_matrix = self._steering_vector_with_error(
+            signal.frequency, angle_incidence, unit="rad"
         )
 
         received = manifold_matrix @ incidence_signal
@@ -388,6 +394,31 @@ class Array(ABC):
             + 1j * self._rng.standard_normal(size=signal.shape)
         )
         return signal + noise
+
+    def _get_multi_path_doa(self, real_doa, num_paths):
+        """Generate multipath DOAs
+
+        Args:
+            real_doa: Real DOAs
+            num_paths: number of paths
+        """
+        if real_doa.ndim == 1:
+            num_signal = real_doa.size
+        else:
+            warnings.warn("Only 1D DOA is supported", UserWarning)
+
+        multipath_angles = np.zeros(num_signal * (num_paths + 1))
+        multipath_angles[:num_signal] = real_doa
+
+        for i in range(num_paths):
+            # angle offsets between -30 and 30 degrees
+            angle_offsets = self._rng.uniform(-np.pi / 6, np.pi / 6, num_signal)
+            # add offsets to the original angles
+            multipath_angles[(i + 1) * num_signal : (i + 2) * num_signal] = (
+                angle_offsets + real_doa
+            )
+
+        return multipath_angles
 
 
 class UniformLinearArray(Array):
