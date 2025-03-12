@@ -425,14 +425,29 @@ class UniformLinearArray(Array):
         self._element_position[:, 1] = self._ideal_position[:, 1] + error
 
     @override
-    def add_mutual_coupling(self, coupling_matrix=None):
+    def add_mutual_coupling(self, rho=0.6, coupling_matrix=None):
+        """Add mutual coupling effects to the array
+
+        Args:
+            rho (float): amplitude of the mutual coupling
+            coupling_matrix (np.ndarray): A square matrix representing mutual
+                coupling between array elements. Should be of size
+                (num_antennas, num_antennas).
+        """
         if coupling_matrix is None:
             # default coupling matrix
-            coefficient = np.zeros(self.num_antennas).astype(np.complex128)
-            coefficient[0] = 1
-            coefficient[1] = 0.65 * np.exp(-1j * np.pi / 7)
-            coefficient[2] = 0.25 * np.exp(-1j * np.pi / 10)
-            coupling_matrix = toeplitz(coefficient)
+
+            # Reference: Liu, Zhang-Meng, Chenwei Zhang, and Philip S. Yu.
+            # “Direction-of-Arrival Estimation Based on Deep Neural Networks
+            # With Robustness to Array Imperfections.” IEEE Transactions on
+            # Antennas and Propagation 66, no. 12 (December 2018): 7315–27.
+            # https://doi.org/10.1109/TAP.2018.2874430.
+
+            coefficient = (rho * np.exp(1j * np.pi / 3)) ** np.arange(
+                self.num_antennas
+            )
+            coefficient[0] = 0
+            coupling_matrix = toeplitz(coefficient) + np.eye(self.num_antennas)
 
         if coupling_matrix.shape != (self.num_antennas, self.num_antennas):
             raise ValueError(
