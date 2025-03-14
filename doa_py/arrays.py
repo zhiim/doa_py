@@ -6,7 +6,7 @@ import numpy as np
 from scipy.linalg import toeplitz
 from typing_extensions import override
 
-from .signals import BroadSignal, NarrowSignal, Signal
+from .signals import BroadSignal, NarrowSignal, RandomFreqSignal, Signal
 
 C = 3e8  # wave speed
 
@@ -122,7 +122,7 @@ class Array(ABC):
 
         return steering_vector
 
-    def add_position_error(self, error_std, error_type="gaussian"):
+    def add_position_error(self):
         """Add position error to the array
 
         Args:
@@ -131,7 +131,7 @@ class Array(ABC):
         """
         warnings.warn("This method is not implemented", UserWarning)
 
-    def add_mutual_coupling(self, coupling_matrix=None):
+    def add_mutual_coupling(self, coupling_matrix=None, **kwargs):
         """Add mutual coupling effects to the array
 
         Args:
@@ -139,7 +139,24 @@ class Array(ABC):
                 coupling between array elements. Should be of size
                 (num_antennas, num_antennas).
         """
-        warnings.warn("This method is not implemented", UserWarning)
+        if coupling_matrix is None:
+            coupling_matrix = self._get_default_coupling_matrix(**kwargs)
+
+        if coupling_matrix.shape != (self.num_antennas, self.num_antennas):
+            raise ValueError(
+                f"Coupling matrix shape {coupling_matrix.shape} does not match "
+                f"the number of antennas {self.num_antennas}"
+            )
+
+        self._coupling_matrix = coupling_matrix
+
+    def _get_default_coupling_matrix(self):
+        warnings.warn(
+            "Custom mutual coupling matrix is not provided, no mutual coupling "
+            "will be considered",
+            UserWarning,
+        )
+        return np.eye(self.num_antennas)
 
     def received_signal(
         self,
@@ -224,10 +241,16 @@ class Array(ABC):
             n=num_signal, nsamples=nsamples, amp=amp, use_cache=use_cache
         )
 
-        if hasattr(signal, "_multipath_enabled") and signal._multipath_enabled:
+        if (
+            hasattr(signal, "_multipath_enabled")
+            and signal._multipath_enabled
+            # multipath DOA is only supported for RandomFreqSignal
+            and isinstance(signal, RandomFreqSignal)
+        ):
             angle_incidence = self._get_multi_path_doa(
                 angle_incidence, signal._num_paths
             )
+            # used to get the multipath DOAs
             self._doa = angle_incidence
 
         manifold_matrix = self._steering_vector_with_error(
@@ -442,7 +465,7 @@ class UniformLinearArray(Array):
         )
 
     @override
-    def add_position_error(self, error_std=0.1, error_type="gaussian"):
+    def add_position_error(self, error_std=0.3, error_type="uniform"):
         dd = self._element_position[1, 1] - self._element_position[0, 1]
         # the error is added to the distance between adjacent antennas
         sigma = error_std * dd
@@ -456,7 +479,7 @@ class UniformLinearArray(Array):
         self._element_position[:, 1] = self._ideal_position[:, 1] + error
 
     @override
-    def add_mutual_coupling(self, rho=0.6, coupling_matrix=None):
+    def _get_default_coupling_matrix(self, rho=0.6):
         """Add mutual coupling effects to the array
 
         Args:
@@ -465,20 +488,19 @@ class UniformLinearArray(Array):
                 coupling between array elements. Should be of size
                 (num_antennas, num_antennas).
         """
-        if coupling_matrix is None:
-            # default coupling matrix
+        # reference: Liu, Zhang-Meng, Chenwei Zhang, and Philip S. Yu.
+        # “Direction-of-Arrival Estimation Based on Deep Neural Networks
+        # With Robustness to Array Imperfections.” IEEE Transactions on
+        # Antennas and Propagation 66, no. 12 (December 2018): 7315–27.
+        # https://doi.org/10.1109/TAP.2018.2874430.
 
-            # Reference: Liu, Zhang-Meng, Chenwei Zhang, and Philip S. Yu.
-            # “Direction-of-Arrival Estimation Based on Deep Neural Networks
-            # With Robustness to Array Imperfections.” IEEE Transactions on
-            # Antennas and Propagation 66, no. 12 (December 2018): 7315–27.
-            # https://doi.org/10.1109/TAP.2018.2874430.
+        coefficient = (rho * np.exp(1j * np.pi / 3)) ** np.arange(
+            self.num_antennas
+        )
+        coefficient[0] = 0
+        coupling_matrix = toeplitz(coefficient) + np.eye(self.num_antennas)
 
-            coefficient = (rho * np.exp(1j * np.pi / 3)) ** np.arange(
-                self.num_antennas
-            )
-            coefficient[0] = 0
-            coupling_matrix = toeplitz(coefficient) + np.eye(self.num_antennas)
+        return coupling_matrix
 
         if coupling_matrix.shape != (self.num_antennas, self.num_antennas):
             raise ValueError(
