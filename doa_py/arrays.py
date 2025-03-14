@@ -129,9 +129,12 @@ class Array(ABC):
             error_std (float): Standard deviation of the position error
             error_type (str): Type of the error, `gaussian` or `uniform`
         """
-        warnings.warn("This method is not implemented", UserWarning)
+        warnings.warn(
+            "This method is not implemented for {}".format(type(self).__name__),
+            UserWarning,
+        )
 
-    def add_mutual_coupling(self, coupling_matrix=None, **kwargs):
+    def add_mutual_coupling(self, coupling_matrix=None):
         """Add mutual coupling effects to the array
 
         Args:
@@ -140,7 +143,7 @@ class Array(ABC):
                 (num_antennas, num_antennas).
         """
         if coupling_matrix is None:
-            coupling_matrix = self._get_default_coupling_matrix(**kwargs)
+            coupling_matrix = self.get_default_coupling_matrix()
 
         if coupling_matrix.shape != (self.num_antennas, self.num_antennas):
             raise ValueError(
@@ -150,10 +153,49 @@ class Array(ABC):
 
         self._coupling_matrix = coupling_matrix
 
-    def _get_default_coupling_matrix(self):
+    def get_default_coupling_matrix(self):
         warnings.warn(
-            "Custom mutual coupling matrix is not provided, no mutual coupling "
-            "will be considered",
+            "Default mutual coupling matrix is not provided for {}, no mutual "
+            "coupling will be considered".format(type(self).__name__),
+            UserWarning,
+        )
+        return np.eye(self.num_antennas)
+
+    def add_correlation_maxtrix(self, correlation_matrix=None):
+        """Add spatial correlation matrix to the array, which is used to
+        generate spatially correlated noise.
+
+        If this method is not called, use the spatially and temporally
+        uncorrelated noise.
+
+        If the `correlation_matrix` is not provided, use the default correlation
+        matrix.
+
+        Args:
+            correlation_matrix (np.ndarray): A square matrix representing
+                spatial correlation between array elements. Should be of size
+                (num_antennas, num_antennas). Defaults to None.
+        """
+        if correlation_matrix is None:
+            correlation_matrix = self.get_default_correlation_matrix()
+
+        if correlation_matrix.shape != (self.num_antennas, self.num_antennas):
+            raise ValueError(
+                f"Correlation matrix shape {correlation_matrix.shape} does not "
+                f"match the number of antennas {self.num_antennas}"
+            )
+
+        self._correlation_matrix = correlation_matrix
+
+    def get_default_correlation_matrix(self):
+        """Use identity matrix as the default correlation matrix, which results
+        in spatially white noise.
+
+        You can override this method to provide a different default correlation.
+        """
+        warnings.warn(
+            "Default correlation matrix is not provided for {}, the generated "
+            "noise will be spatially white noise".format(type(self).__name__),
             UserWarning,
         )
         return np.eye(self.num_antennas)
@@ -260,7 +302,7 @@ class Array(ABC):
         received = manifold_matrix @ incidence_signal
 
         if snr is not None:
-            received = self._add_awgn(received, snr)
+            received = self._add_noise(received, snr)
 
         return received
 
@@ -346,7 +388,7 @@ class Array(ABC):
         received = np.fft.ifft(received_fre_domain, axis=1)
 
         if snr is not None:
-            received = self._add_awgn(received, snr)
+            received = self._add_noise(received, snr)
 
         return received
 
@@ -405,17 +447,25 @@ class Array(ABC):
             )
 
         if snr is not None:
-            received = self._add_awgn(received, snr)
+            received = self._add_noise(received, snr)
 
         return received
 
-    def _add_awgn(self, signal, snr_db):
+    def _add_noise(self, signal, snr_db):
         sig_pow = np.mean(np.abs(signal) ** 2, axis=1)
         noise_pow = sig_pow / 10 ** (snr_db / 10)
+
         noise = (np.sqrt(noise_pow / 2)).reshape(-1, 1) * (
             self._rng.standard_normal(size=signal.shape)
             + 1j * self._rng.standard_normal(size=signal.shape)
         )
+
+        # if spatial correlation matrix is provided, add correlated noise
+        if hasattr(self, "_correlation_matrix"):
+            # use Cholesky decomposition to generate spatially correlated noise
+            matrix_sqrt = np.linalg.cholesky(self._correlation_matrix)
+            noise = matrix_sqrt @ noise
+
         return signal + noise
 
     def _get_multi_path_doa(self, real_doa, num_paths):
@@ -479,7 +529,7 @@ class UniformLinearArray(Array):
         self._element_position[:, 1] = self._ideal_position[:, 1] + error
 
     @override
-    def _get_default_coupling_matrix(self, rho=0.6):
+    def get_default_coupling_matrix(self, rho=0.6):
         """Add mutual coupling effects to the array
 
         Args:
@@ -502,13 +552,19 @@ class UniformLinearArray(Array):
 
         return coupling_matrix
 
-        if coupling_matrix.shape != (self.num_antennas, self.num_antennas):
-            raise ValueError(
-                f"Coupling matrix shape {coupling_matrix.shape} does not match "
-                f"the number of antennas {self.num_antennas}"
-            )
+    @override
+    def get_default_correlation_matrix(self, rho=0.5):
+        # reference: Agrawal, M., and S. Prasad. “A Modified Likelihood
+        # Function Approach to DOA Estimation in the Presence of Unknown
+        # Spatially Correlated Gaussian Noise Using a Uniform Linear Array.”
+        # IEEE Transactions on Signal Processing 48, no. 10 (October 2000):
+        # 2743–49. https://doi.org/10.1109/78.869024.
+        correlation_matrix = (rho ** np.arange(self.num_antennas)) * np.exp(
+            -1j * np.pi / 2 * np.arange(self.num_antennas)
+        )
+        correlation_matrix = toeplitz(correlation_matrix)
 
-        self._coupling_matrix = coupling_matrix
+        return correlation_matrix
 
 
 class UniformCircularArray(Array):
