@@ -161,7 +161,7 @@ class Array(ABC):
         )
         return np.eye(self.num_antennas)
 
-    def add_correlation_maxtrix(self, correlation_matrix=None):
+    def add_correlation_matrix(self, correlation_matrix=None):
         """Add spatial correlation matrix to the array, which is used to
         generate spatially correlated noise.
 
