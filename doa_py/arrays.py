@@ -516,7 +516,7 @@ class UniformLinearArray(Array):
 
     @override
     def add_position_error(self, error_std=0.3, error_type="uniform"):
-        dd = self._element_position[1, 1] - self._element_position[0, 1]
+        dd = self._ideal_position[1, 1] - self._ideal_position[0, 1]
         # the error is added to the distance between adjacent antennas
         sigma = error_std * dd
         if error_type == "gaussian":
