@@ -1,4 +1,3 @@
-import warnings
 from abc import ABC
 from typing import Literal
 
@@ -6,7 +5,7 @@ import numpy as np
 from scipy.linalg import toeplitz
 from typing_extensions import override
 
-from .signals import BroadSignal, NarrowSignal, RandomFreqSignal, Signal
+from .signals import BroadSignal, NarrowSignal
 
 C = 3e8  # wave speed
 
@@ -14,18 +13,16 @@ C = 3e8  # wave speed
 class Array(ABC):
     def __init__(
         self,
-        element_position_x,
-        element_position_y,
-        element_position_z,
-        rng=None,
+        element_position_x: np.ndarray,
+        element_position_y: np.ndarray,
+        element_position_z: np.ndarray,
+        rng: np.random.Generator | None = None,
     ):
         """element position should be defined in 3D (x, y, z) coordinate
         system"""
         self._element_position = np.vstack(
             (element_position_x, element_position_y, element_position_z)
         ).T
-
-        self._ideal_position = self._element_position.copy()
 
         if rng is None:
             self._rng = np.random.default_rng()
@@ -38,9 +35,9 @@ class Array(ABC):
 
     @property
     def array_position(self):
-        return self._ideal_position
+        return self._element_position
 
-    def set_rng(self, rng):
+    def set_rng(self, rng: np.random.Generator):
         """Setting random number generator
 
         Args:
@@ -49,12 +46,15 @@ class Array(ABC):
         self._rng = rng
 
     def _unify_unit(self, variable, unit):
+        """Convert variable to radian"""
         if unit == "deg":
             variable = variable / 180 * np.pi
 
         return variable
 
-    def steering_vector(self, fre, angle_incidence, unit="deg"):
+    def steering_vector(
+        self, fre: float, angle_incidence: np.ndarray, unit: str = "deg"
+    ) -> np.ndarray:
         """Calculate steering vector corresponding to the angle of incidence
 
         Args:
@@ -85,126 +85,69 @@ class Array(ABC):
         sin_cos = np.sin(angle_incidence[0]) * np.cos(angle_incidence[1])
         sin_ = np.sin(angle_incidence[1])
 
-        # only the ideal position is known by algorithms
-        time_delay = (
-            1 / C * self._ideal_position @ np.vstack((cos_cos, sin_cos, sin_))
-        )
-        steering_vector = np.exp(-1j * 2 * np.pi * fre * time_delay)
-
-        return steering_vector
-
-    def _steering_vector_with_error(self, fre, angle_incidence, unit="deg"):
-        if np.squeeze(angle_incidence).ndim == 1 or angle_incidence.size == 1:
-            angle_incidence = np.vstack(
-                (angle_incidence.reshape(1, -1), np.zeros(angle_incidence.size))
-            )
-
-        angle_incidence = self._unify_unit(
-            np.reshape(angle_incidence, (2, -1)), unit
-        )
-
-        cos_cos = np.cos(angle_incidence[0]) * np.cos(angle_incidence[1])
-        sin_cos = np.sin(angle_incidence[0]) * np.cos(angle_incidence[1])
-        sin_ = np.sin(angle_incidence[1])
-
-        # used to generate received signal using the actual position
         time_delay = (
             1 / C * self._element_position @ np.vstack((cos_cos, sin_cos, sin_))
         )
         steering_vector = np.exp(-1j * 2 * np.pi * fre * time_delay)
 
-        # applying mutual coupling effects
-        if (
-            hasattr(self, "_coupling_matrix")
-            and self._coupling_matrix is not None
-        ):
-            steering_vector = self._coupling_matrix @ steering_vector
-
         return steering_vector
-
-    def add_position_error(self):
-        """Add position error to the array
-
-        Args:
-            error_std (float): Standard deviation of the position error
-            error_type (str): Type of the error, `gaussian` or `uniform`
-        """
-        warnings.warn(
-            "This method is not implemented for {}".format(type(self).__name__),
-            UserWarning,
-        )
-
-    def add_mutual_coupling(self, coupling_matrix=None):
-        """Add mutual coupling effects to the array
-
-        Args:
-            coupling_matrix (np.ndarray): A square matrix representing mutual
-                coupling between array elements. Should be of size
-                (num_antennas, num_antennas).
-        """
-        if coupling_matrix is None:
-            coupling_matrix = self.get_default_coupling_matrix()
-
-        if coupling_matrix.shape != (self.num_antennas, self.num_antennas):
-            raise ValueError(
-                f"Coupling matrix shape {coupling_matrix.shape} does not match "
-                f"the number of antennas {self.num_antennas}"
-            )
-
-        self._coupling_matrix = coupling_matrix
-
-    def get_default_coupling_matrix(self):
-        warnings.warn(
-            "Default mutual coupling matrix is not provided for {}, no mutual "
-            "coupling will be considered".format(type(self).__name__),
-            UserWarning,
-        )
-        return np.eye(self.num_antennas)
-
-    def add_correlation_matrix(self, correlation_matrix=None):
-        """Add spatial correlation matrix to the array, which is used to
-        generate spatially correlated noise.
-
-        If this method is not called, use the spatially and temporally
-        uncorrelated noise.
-
-        If the `correlation_matrix` is not provided, use the default correlation
-        matrix.
-
-        Args:
-            correlation_matrix (np.ndarray): A square matrix representing
-                spatial correlation between array elements. Should be of size
-                (num_antennas, num_antennas). Defaults to None.
-        """
-        if correlation_matrix is None:
-            correlation_matrix = self.get_default_correlation_matrix()
-
-        if correlation_matrix.shape != (self.num_antennas, self.num_antennas):
-            raise ValueError(
-                f"Correlation matrix shape {correlation_matrix.shape} does not "
-                f"match the number of antennas {self.num_antennas}"
-            )
-
-        self._correlation_matrix = correlation_matrix
-
-    def get_default_correlation_matrix(self):
-        """Use identity matrix as the default correlation matrix, which results
-        in spatially white noise.
-
-        You can override this method to provide a different default correlation.
-        """
-        warnings.warn(
-            "Default correlation matrix is not provided for {}, the generated "
-            "noise will be spatially white noise".format(type(self).__name__),
-            UserWarning,
-        )
-        return np.eye(self.num_antennas)
 
     def received_signal(
         self,
-        signal: Signal,
-        angle_incidence,
-        snr=None,
+        signal: NarrowSignal,
+        angle_incidence: np.ndarray,
+        snr: int | float | None = None,
+        nsamples: int = 100,
+        amp: float = None,
+        unit: str = "deg",
+        use_cache: bool = False,
+    ) -> np.ndarray:
+        """Generate array received signal based on array signal model, only
+        narrowband signal is supported.
+
+        Args:
+            signal: An instance of the `Signal` class
+            angle_incidence: Incidence angle. If only azimuth is considered,
+                `angle_incidence` is a 1xN dimensional matrix; if two dimensions
+                are considered, `angle_incidence` is a 2xN dimensional matrix,
+                where the first row is the azimuth and the second row is the
+                elevation angle.
+            snr: Signal-to-noise ratio. If set to None, no noise will be added
+            nsamples (int): Number of snapshots, defaults to 100
+            amp: The amplitude of each signal, 1d numpy array
+            unit: The unit of the angle, `rad` represents radian,
+                `deg` represents degree. Defaults to 'deg'.
+            use_cache (bool): If True, use cache to generate identical signals
+                (noise is random). Default to `False`.
+        """
+        # Convert the angle from degree to radians
+        angle_incidence = self._unify_unit(angle_incidence, unit)
+
+        if angle_incidence.ndim == 1:
+            num_signal = angle_incidence.size
+        else:
+            num_signal = angle_incidence.shape[1]
+
+        incidence_signal = signal.gen(
+            n=num_signal, nsamples=nsamples, amp=amp, use_cache=use_cache
+        )
+
+        manifold_matrix = self.steering_vector(
+            signal.frequency, angle_incidence, unit="rad"
+        )
+
+        received = manifold_matrix @ incidence_signal
+
+        if snr is not None:
+            received += self._add_noise(received, snr)
+
+        return received
+
+    def received_signal_broad(
+        self,
+        signal: BroadSignal,
+        angle_incidence: np.ndarray,
+        snr: int | float | None = None,
         nsamples=100,
         amp=None,
         unit="deg",
@@ -212,10 +155,8 @@ class Array(ABC):
         calc_method: Literal["delay", "fft"] = "delay",
         **kwargs,
     ):
-        """Generate array received signal based on array signal model
-
-        If `broadband` is set to True, generate array received signal based on
-        broadband signal's model.
+        """Generate array received signal based on array signal model, only
+        broadband signal is supported.
 
         Args:
             signal: An instance of the `Signal` class
@@ -234,75 +175,21 @@ class Array(ABC):
             calc_method (str): Only used when generate broadband signal.
                 Generate broadband signal in frequency domain, or time domain
                 using delay. Defaults to `delay`.
+            **kwargs: Additional parameters passed to the signal generation
         """
         # Convert the angle from degree to radians
         angle_incidence = self._unify_unit(angle_incidence, unit)
 
-        if isinstance(signal, BroadSignal):
-            received = self._gen_broadband(
-                signal=signal,
-                snr=snr,
-                nsamples=nsamples,
-                angle_incidence=angle_incidence,
-                amp=amp,
-                use_cache=use_cache,
-                calc_method=calc_method,
-                **kwargs,
-            )
-        if isinstance(signal, NarrowSignal):
-            received = self._gen_narrowband(
-                signal=signal,
-                snr=snr,
-                nsamples=nsamples,
-                angle_incidence=angle_incidence,
-                amp=amp,
-                use_cache=use_cache,
-            )
-
-        return received
-
-    def _gen_narrowband(
-        self,
-        signal: NarrowSignal,
-        snr,
-        nsamples,
-        angle_incidence,
-        amp,
-        use_cache=False,
-    ):
-        """Generate narrowband received signal
-
-        `azimuth` and `elevation` are already in radians
-        """
-        if angle_incidence.ndim == 1:
-            num_signal = angle_incidence.size
-        else:
-            num_signal = angle_incidence.shape[1]
-
-        incidence_signal = signal.gen(
-            n=num_signal, nsamples=nsamples, amp=amp, use_cache=use_cache
+        received = self._gen_broadband(
+            signal=signal,
+            snr=snr,
+            nsamples=nsamples,
+            angle_incidence=angle_incidence,
+            amp=amp,
+            use_cache=use_cache,
+            calc_method=calc_method,
+            **kwargs,
         )
-
-        if (
-            hasattr(signal, "_multipath_enabled")
-            and signal._multipath_enabled
-            # multipath DOA is only supported for RandomFreqSignal
-            and isinstance(signal, RandomFreqSignal)
-        ):
-            angle_incidence = self._get_multi_path_doa(
-                angle_incidence, signal._num_paths
-            )
-            # used to get the multipath DOAs
-            self._doa = angle_incidence
-
-        manifold_matrix = self._steering_vector_with_error(
-            signal.frequency, angle_incidence, unit="rad"
-        )
-
-        received = manifold_matrix @ incidence_signal
-
-        if snr is not None:
-            received = self._add_noise(received, snr)
 
         return received
 
@@ -359,7 +246,7 @@ class Array(ABC):
         else:
             num_signal = angle_incidence.shape[1]
 
-        num_antennas = self._element_position.shape[0]
+        num_antennas = self.num_antennas
 
         incidence_signal = signal.gen(
             n=num_signal,
@@ -378,7 +265,7 @@ class Array(ABC):
         )
         fre_points = np.fft.fftfreq(nsamples, 1 / signal.fs)
         for i, fre in enumerate(fre_points):
-            manifold_fre = self._steering_vector_with_error(
+            manifold_fre = self.steering_vector(
                 fre, angle_incidence, unit="rad"
             )
 
@@ -388,7 +275,7 @@ class Array(ABC):
         received = np.fft.ifft(received_fre_domain, axis=1)
 
         if snr is not None:
-            received = self._add_noise(received, snr)
+            received += self._add_noise(received, snr)
 
         return received
 
@@ -447,7 +334,7 @@ class Array(ABC):
             )
 
         if snr is not None:
-            received = self._add_noise(received, snr)
+            received += self._add_noise(received, snr)
 
         return received
 
@@ -460,38 +347,7 @@ class Array(ABC):
             + 1j * self._rng.standard_normal(size=signal.shape)
         )
 
-        # if spatial correlation matrix is provided, add correlated noise
-        if hasattr(self, "_correlation_matrix"):
-            # use Cholesky decomposition to generate spatially correlated noise
-            matrix_sqrt = np.linalg.cholesky(self._correlation_matrix)
-            noise = matrix_sqrt @ noise
-
-        return signal + noise
-
-    def _get_multi_path_doa(self, real_doa, num_paths):
-        """Generate multipath DOAs
-
-        Args:
-            real_doa: Real DOAs
-            num_paths: number of paths
-        """
-        if real_doa.ndim == 1:
-            num_signal = real_doa.size
-        else:
-            warnings.warn("Only 1D DOA is supported", UserWarning)
-
-        multipath_angles = np.zeros(num_signal * (num_paths + 1))
-        multipath_angles[:num_signal] = real_doa
-
-        for i in range(num_paths):
-            # angle offsets between -30 and 30 degrees
-            angle_offsets = self._rng.uniform(-np.pi / 6, np.pi / 6, num_signal)
-            # add offsets to the original angles
-            multipath_angles[(i + 1) * num_signal : (i + 2) * num_signal] = (
-                angle_offsets + real_doa
-            )
-
-        return multipath_angles
+        return noise
 
 
 class UniformLinearArray(Array):
@@ -514,57 +370,274 @@ class UniformLinearArray(Array):
             element_position_x, element_position_y, element_position_z, rng
         )
 
-    @override
-    def add_position_error(self, error_std=0.3, error_type="uniform"):
-        dd = self._ideal_position[1, 1] - self._ideal_position[0, 1]
+        # used to store the real position with error
+        self._real_position = self._element_position.copy()
+
+    def add_position_error(
+        self,
+        pos_error: np.ndarray,
+    ):
+        """Add position error to the array
+
+        Args:
+            pos_error (np.ndarray): An array of shape (num_antennas,)
+                representing the position error in x, y, z directions for each
+                antenna
+        """
+        if pos_error.shape != (self.num_antennas,):
+            raise ValueError(
+                f"Position error shape {pos_error.shape} does not match "
+                f"the position of antennas ({self.num_antennas},)"
+            )
+        self._real_position[:, 1] = self._element_position[:, 1] + pos_error
+
+    def add_position_error_default(
+        self,
+        error_std: float = 0.3,
+        error_type: Literal["uniform", "gaussian"] = "uniform",
+    ):
+        """Generate position error randomly to the array. It can be used when
+        no specific position error is provided.
+
+        Args:
+            error_std (float): Standard deviation of the position error
+            error_type (str): Type of the error, `gaussian` or `uniform`
+        """
+        dd = self._element_position[1, 1] - self._element_position[0, 1]
         # the error is added to the distance between adjacent antennas
         sigma = error_std * dd
         if error_type == "gaussian":
             error = self._rng.normal(0, sigma, self.num_antennas)
         elif error_type == "uniform":
             error = self._rng.uniform(-sigma, sigma, self.num_antennas)
-        else:
-            raise ValueError("Invalid error type")
 
-        self._element_position[:, 1] = self._ideal_position[:, 1] + error
+        self.add_position_error(error)
 
-    @override
-    def get_default_coupling_matrix(self, rho=0.6):
+    def add_mutual_coupling(self, coupling_matrix: np.ndarray):
         """Add mutual coupling effects to the array
+
+        Args:
+            coupling_matrix (np.ndarray): A square matrix representing mutual
+                coupling between array elements. Should be of size
+                (num_antennas, num_antennas).
+        """
+        if coupling_matrix.shape != (self.num_antennas, self.num_antennas):
+            raise ValueError(
+                f"Coupling matrix shape {coupling_matrix.shape} does not match "
+                f"({self.num_antennas}, {self.num_antennas})"
+            )
+
+        self._coupling_matrix = coupling_matrix
+
+    def add_mutual_coupling_default(self, rho=0.6):
+        """Add mutual coupling effects to the array using default generated
+        coupling matrix.
 
         Args:
             rho (float): amplitude of the mutual coupling
             coupling_matrix (np.ndarray): A square matrix representing mutual
                 coupling between array elements. Should be of size
                 (num_antennas, num_antennas).
-        """
-        # reference: Liu, Zhang-Meng, Chenwei Zhang, and Philip S. Yu.
-        # “Direction-of-Arrival Estimation Based on Deep Neural Networks
-        # With Robustness to Array Imperfections.” IEEE Transactions on
-        # Antennas and Propagation 66, no. 12 (December 2018): 7315–27.
-        # https://doi.org/10.1109/TAP.2018.2874430.
 
+        Reference:
+            Liu, Zhang-Meng, Chenwei Zhang, and Philip S. Yu.
+            “Direction-of-Arrival Estimation Based on Deep Neural Networks
+            With Robustness to Array Imperfections.”
+            IEEE Transactions on Antennas and Propagation 66, no. 12
+            (December 2018): 7315–27.
+            https://doi.org/10.1109/TAP.2018.2874430.
+        """
         coefficient = (rho * np.exp(1j * np.pi / 3)) ** np.arange(
             self.num_antennas
         )
         coefficient[0] = 0
         coupling_matrix = toeplitz(coefficient) + np.eye(self.num_antennas)
 
-        return coupling_matrix
+        self.add_mutual_coupling(coupling_matrix)
 
-    @override
-    def get_default_correlation_matrix(self, rho=0.5):
-        # reference: Agrawal, M., and S. Prasad. “A Modified Likelihood
-        # Function Approach to DOA Estimation in the Presence of Unknown
-        # Spatially Correlated Gaussian Noise Using a Uniform Linear Array.”
-        # IEEE Transactions on Signal Processing 48, no. 10 (October 2000):
-        # 2743–49. https://doi.org/10.1109/78.869024.
+    def add_gain_phase_error(
+        self, gain_error: np.ndarray, phase_error: np.ndarray
+    ):
+        """Add gain and phase error to the array
+
+        Args:
+            gain_error (np.ndarray): An array of shape (num_antennas,)
+                representing the gain error in x, y, z directions for each
+                antenna
+            phase_error (np.ndarray): An array of shape (num_antennas,)
+                representing the phase error in x, y, z directions for each
+                antenna
+        """
+        if gain_error.shape != (self.num_antennas,):
+            raise ValueError(
+                f"Gain error shape {gain_error.shape} does not match "
+                f"the number of antennas ({self.num_antennas},)"
+            )
+        if phase_error.shape != (self.num_antennas,):
+            raise ValueError(
+                f"Phase error shape {phase_error.shape} does not match "
+                f"the number of antennas ({self.num_antennas},)"
+            )
+
+        self._gain_phase_error_matrix = np.diag(
+            gain_error * np.exp(1j * phase_error)
+        )
+
+    def add_gain_phase_error_default(
+        self, gain_error_std: float = 0.1, phase_error_amp: float = 2 * np.pi
+    ):
+        """Generate gain and phase error randomly to the array. It can be used
+        when no specific gain and phase error is provided.
+
+        Args:
+            gain_error_std (float): Standard deviation of the gain error in
+                gaussian distribution
+            phase_error_amp (float): Amplitude of the phase error (max expected
+                value)
+        """
+        gain_error = self._rng.normal(
+            loc=1.0, scale=gain_error_std, size=self.num_antennas
+        )
+        phase_error = (phase_error_amp / (2 * np.pi)) * self._rng.uniform(
+            low=0, high=2 * np.pi, size=self.num_antennas
+        )
+
+        self.add_gain_phase_error(gain_error, phase_error)
+
+    def add_correlatted_noise(self, correlation_matrix=np.ndarray):
+        """Add spatial correlation matrix to the array, which is used to
+        generate spatially correlated noise.
+
+        If this method is not called, use the spatially and temporally
+        uncorrelated noise.
+
+        Args:
+            correlation_matrix (np.ndarray): A square matrix representing
+                spatial correlation between array elements. Should be of size
+                (num_antennas, num_antennas). Defaults to None.
+        """
+        if correlation_matrix.shape != (self.num_antennas, self.num_antennas):
+            raise ValueError(
+                f"Correlation matrix shape {correlation_matrix.shape} does not "
+                f"match the number of antennas {self.num_antennas}"
+            )
+
+        self._correlation_matrix = correlation_matrix
+
+    def add_correlatted_noise_default(self, rho=0.5):
+        """Add default generated spatial correlation matrix to the array, which
+        is used to generate spatially correlated noise.
+
+        Args:
+            rho (float): amplitude of the correlation matrix
+
+        Reference:
+            Agrawal, M., and S. Prasad.
+            “A Modified Likelihood Function Approach to DOA Estimation in the
+            Presence of Unknown Spatially Correlated Gaussian Noise Using a
+            Uniform Linear Array.”
+            IEEE Transactions on Signal Processing 48, no. 10 (October 2000):
+            2743–49.
+            https://doi.org/10.1109/78.869024.
+        """
         correlation_matrix = (rho ** np.arange(self.num_antennas)) * np.exp(
             -1j * np.pi / 2 * np.arange(self.num_antennas)
         )
         correlation_matrix = toeplitz(correlation_matrix)
 
-        return correlation_matrix
+        self.add_correlatted_noise(correlation_matrix)
+
+    @override
+    def _add_noise(self, signal, snr_db):
+        noise = super()._add_noise(signal=signal, snr_db=snr_db)
+
+        # if spatial correlation matrix is provided, add correlated noise
+        if hasattr(self, "_correlation_matrix"):
+            # use Cholesky decomposition to generate spatially correlated noise
+            matrix_sqrt = np.linalg.cholesky(self._correlation_matrix)
+            noise = matrix_sqrt @ noise
+
+        return noise
+
+    @override
+    def received_signal(
+        self,
+        signal: NarrowSignal,
+        angle_incidence: np.ndarray,
+        snr: int | float | None = None,
+        nsamples: int = 100,
+        amp: float = None,
+        unit: str = "deg",
+        use_cache: bool = False,
+    ) -> np.ndarray:
+        element_position_backup = self._element_position.copy()
+        self._element_position = self._real_position  # consider position error
+        received = super().received_signal(
+            signal=signal,
+            angle_incidence=angle_incidence,
+            snr=None,  # noise added later to add other errors
+            nsamples=nsamples,
+            amp=amp,
+            unit=unit,
+            use_cache=use_cache,
+        )
+        self._element_position = element_position_backup  # restore position
+
+        # add mutual coupling effect if provided
+        if hasattr(self, "_coupling_matrix"):
+            received = self._coupling_matrix @ received
+
+        # add gain and phase error if provided
+        if hasattr(self, "_gain_phase_error_matrix"):
+            received = self._gain_phase_error_matrix @ received
+
+        # add noise
+        if snr is not None:
+            received += self._add_noise(received, snr)
+
+        return received
+
+    @override
+    def received_signal_broad(
+        self,
+        signal: BroadSignal,
+        angle_incidence: np.ndarray,
+        snr: int | float | None = None,
+        nsamples=100,
+        amp=None,
+        unit="deg",
+        use_cache=False,
+        calc_method: Literal["delay", "fft"] = "delay",
+        **kwargs,
+    ):
+        element_position_backup = self._element_position.copy()
+        self._element_position = self._real_position  # consider position error
+        received = super().received_signal_broad(
+            signal=signal,
+            angle_incidence=angle_incidence,
+            snr=None,  # noise added later to add other errors
+            nsamples=nsamples,
+            amp=amp,
+            unit=unit,
+            use_cache=use_cache,
+            calc_method=calc_method,
+            **kwargs,
+        )
+        self._element_position = element_position_backup  # restore position
+
+        # add mutual coupling effect if provided
+        if hasattr(self, "_coupling_matrix"):
+            received = self._coupling_matrix @ received
+
+        # add gain and phase error if provided
+        if hasattr(self, "_gain_phase_error_matrix"):
+            received = self._gain_phase_error_matrix @ received
+
+        # add noise
+        if snr is not None:
+            received += self._add_noise(received, snr)
+
+        return received
 
 
 class UniformCircularArray(Array):
