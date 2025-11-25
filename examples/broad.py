@@ -44,12 +44,13 @@ plt.xlabel("Frequency (Hz)")
 plt.ylabel("Magnitude")
 plt.show()
 
-received_data = array.received_signal(
+received_data = array.received_signal_broad(
     signal=signal,
     snr=snr,
     nsamples=num_snapshots,
     angle_incidence=angle_incidence,
     unit="deg",
+    calc_method="delay",
 )
 
 

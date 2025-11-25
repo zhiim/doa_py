@@ -120,6 +120,13 @@ class Array(ABC):
             use_cache (bool): If True, use cache to generate identical signals
                 (noise is random). Default to `False`.
         """
+        if not isinstance(signal, NarrowSignal):
+            raise ValueError(
+                "Narrowband signal is required for this method. Use "
+                "`received_signal_broad` method for "
+                "`{signal.__class__.__name__}` instead."
+            )
+
         # Convert the angle from degree to radians
         angle_incidence = self._unify_unit(angle_incidence, unit)
 
@@ -177,6 +184,13 @@ class Array(ABC):
                 using delay. Defaults to `delay`.
             **kwargs: Additional parameters passed to the signal generation
         """
+        if not isinstance(signal, BroadSignal):
+            raise ValueError(
+                "Broadband signal is required for this method. Use "
+                "`received_signal_broad` method for "
+                "`{signal.__class__.__name__}` instead."
+            )
+
         # Convert the angle from degree to radians
         angle_incidence = self._unify_unit(angle_incidence, unit)
 
