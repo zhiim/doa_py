@@ -5,7 +5,9 @@ from .utils import get_signal_space
 C = 3e8
 
 
-def esprit(received_data, num_signal, array, signal_fre, unit="deg"):
+def esprit(
+    received_data, num_signal, array, signal_fre, use_cov=False, unit="deg"
+):
     """Total least-squares ESPRIT. Most names of matrix are taken directly from
     the reference paper.
 
@@ -14,6 +16,8 @@ def esprit(received_data, num_signal, array, signal_fre, unit="deg"):
         num_signal : Number of signals
         array : Instance of array class
         signal_fre: Signal frequency
+        use_cov: Whether to use covariance matrix or original signal as input.
+            Defaults to False.
         unit : Unit of angle, 'rad' for radians, 'deg' for degrees. Defaults to
             'deg'.
 
@@ -23,7 +27,10 @@ def esprit(received_data, num_signal, array, signal_fre, unit="deg"):
         Speech, and Signal Processing 37, no. 7 (July 1989): 984-95.
         https://doi.org/10.1109/29.32276.
     """
-    signal_space = get_signal_space(np.cov(received_data), num_signal)
+    if not use_cov:
+        received_data = np.cov(received_data)
+
+    signal_space = get_signal_space(received_data, num_signal)
 
     # get signal space of two sub array. Each sub array consists of M-1 antennas
     matrix_e_x = signal_space[:-1, :]

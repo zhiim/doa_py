@@ -1,13 +1,22 @@
+from typing import Literal
+
 import numpy as np
 
+from ..arrays import Array
 from .utils import forward_backward_smoothing, get_noise_space
 
 C = 3e8
 
 
 def music(
-    received_data, num_signal, array, signal_fre, angle_grids, unit="deg"
-):
+    received_data: np.ndarray,
+    num_signal: int,
+    array: Array,
+    signal_fre: float,
+    angle_grids: np.ndarray,
+    use_cov: bool = False,
+    unit: Literal["rad", "deg"] = "deg",
+) -> np.ndarray:
     """1D MUSIC
 
     Args:
@@ -17,10 +26,15 @@ def music(
         signal_fre: Signal frequency
         angle_grids : Angle grids corresponding to spatial spectrum. It should
             be a numpy array.
+        use_cov: Whether to use covariance matrix or original signal as input.
+            Defaults to False.
         unit : Unit of angle, 'rad' for radians, 'deg' for degrees. Defaults to
             'deg'.
     """
-    noise_space = get_noise_space(np.cov(received_data), num_signal)
+    if not use_cov:
+        received_data = np.cov(received_data)
+
+    noise_space = get_noise_space(received_data, num_signal)
 
     # Calculate the manifold matrix when there are incident signal in all
     # grid points
@@ -37,7 +51,14 @@ def music(
     return np.squeeze(spectrum)
 
 
-def root_music(received_data, num_signal, array, signal_fre, unit="deg"):
+def root_music(
+    received_data: np.ndarray,
+    num_signal: int,
+    array: Array,
+    signal_fre: float,
+    use_cov: bool = False,
+    unit: Literal["rad", "deg"] = "deg",
+) -> np.ndarray:
     """Root-MUSIC
 
     Args:
@@ -45,6 +66,8 @@ def root_music(received_data, num_signal, array, signal_fre, unit="deg"):
         num_signal : Number of signals
         array : Instance of array class
         signal_fre: Signal frequency
+        use_cov: Whether to use covariance matrix or original signal as input.
+            Defaults to False.
         unit: The unit of the angle, `rad` represents radian, `deg` represents
             degree. Defaults to 'deg'.
 
@@ -53,7 +76,10 @@ def root_music(received_data, num_signal, array, signal_fre, unit="deg"):
         IEEE Transactions on Acoustics, Speech, and Signal Processing 37,
         no. 12 (December 1989): 1939-49. https://doi.org/10.1109/29.45540.
     """
-    noise_space = get_noise_space(np.cov(received_data), num_signal)
+    if not use_cov:
+        received_data = np.cov(received_data)
+
+    noise_space = get_noise_space(received_data, num_signal)
 
     num_antennas = array.num_antennas
     antenna_spacing = array.array_position[1][1] - array.array_position[0][1]
