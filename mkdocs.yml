@@ -1,0 +1,48 @@
+site_name: DOA_Py
+site_url: https://zhiim.github.io/doa_py/
+repo_url: https://github.com/zhiim/doa_py
+repo_name: zhiim/doa_py
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - content.code.copy
+    - content.code.annotate
+    - navigation.expand
+    - navigation.indexes
+    - navigation.top
+    - search.suggest
+    - search.highlight
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+
+nav:
+  - Home: index.md
+  - Reference:
+      - Arrays: reference/arrays.md
+      - Signals: reference/signals.md
+      - Algorithm: reference/algorithm.md
+      - Plot: reference/plot.md
