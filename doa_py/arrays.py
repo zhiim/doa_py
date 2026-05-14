@@ -139,6 +139,11 @@ class Array(ABC):
             n=num_signal, nsamples=nsamples, amp=amp, use_cache=use_cache
         )
 
+        if hasattr(signal, "_multipath_enabled") and signal._multipath_enabled:
+            angle_incidence = signal.get_multipath_doa(angle_incidence)
+            # used to get the multipath DOAs
+            signal.doa = angle_incidence
+
         manifold_matrix = self.steering_vector(
             signal.frequency, angle_incidence, unit="rad"
         )

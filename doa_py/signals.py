@@ -4,7 +4,6 @@ from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import numpy.typing as npt
-from typing_extensions import override
 
 ListLike = Union[npt.NDArray[np.number], list[int | float | complex]]
 
@@ -105,6 +104,14 @@ class Signal(ABC):
         """Generate multipath components"""
         warnings.warn("This method is not implemented", UserWarning)
 
+    def get_multipath_doa(self):
+        """Generate multipath DOAs
+
+        Args:
+            real_doa: Real DOAs
+        """
+        warnings.warn("This method is not implemented", UserWarning)
+
 
 class NarrowSignal(Signal):
     def __init__(
@@ -193,9 +200,9 @@ class RandomFreqSignal(NarrowSignal):
         """
         super().__init__(fc, rng)
 
-        assert (
-            0 < freq_ratio < 0.1
-        ), "This signal must be narrowband: freq_ratio in (0, 0.1)"
+        assert 0 < freq_ratio < 0.1, (
+            "This signal must be narrowband: freq_ratio in (0, 0.1)"
+        )
         self._freq_ratio = freq_ratio
 
         self._coherent = coherent
@@ -234,13 +241,12 @@ class RandomFreqSignal(NarrowSignal):
 
         # add multipath effect
         if hasattr(self, "_multipath_enabled") and self._multipath_enabled:
-            path_signal = self._generate_multipath(signal, self.frequency)
+            path_signal = self._generate_multipath(signal)
             signal = np.vstack([signal, path_signal])
 
         return signal
 
-    @override
-    def _generate_multipath(self, signal_data, signal_fre):
+    def _generate_multipath(self, signal_data):
         num_signal = signal_data.shape[0]
         num_snapshots = signal_data.shape[1]
 
@@ -263,6 +269,30 @@ class RandomFreqSignal(NarrowSignal):
             )
 
         return path_signal
+
+    def get_multipath_doa(self, real_doa):
+        """Generate multipath DOAs
+
+        Args:
+            real_doa: Real DOAs
+        """
+        if real_doa.ndim == 1:
+            num_signal = real_doa.size
+        else:
+            warnings.warn("Only 1D DOA is supported", UserWarning)
+
+        multipath_angles = np.zeros(num_signal * (self._num_paths + 1))
+        multipath_angles[:num_signal] = real_doa
+
+        for i in range(self._num_paths):
+            # angle offsets between -30 and 30 degrees
+            angle_offsets = self._rng.uniform(-np.pi / 6, np.pi / 6, num_signal)
+            # add offsets to the original angles
+            multipath_angles[(i + 1) * num_signal : (i + 2) * num_signal] = (
+                angle_offsets + real_doa
+            )
+
+        return multipath_angles
 
 
 class BroadSignal(Signal):
